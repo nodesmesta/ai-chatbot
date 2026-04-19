@@ -37,16 +37,38 @@ export async function extractTextContent(file: File): Promise<FileContentResult>
 }
 
 /**
- * Extract content from PDF using client-side PDF.js
- * Note: For client-side PDF extraction, we use a simple fallback since pdfjs-dist is removed
+ * Extract content from PDF using server API
  */
 async function extractPdfContent(file: File): Promise<FileContentResult> {
-  // Client-side PDF extraction requires pdfjs-dist which is now removed
-  // The actual PDF extraction will be done server-side via API
-  return {
-    success: false,
-    error: "PDF extraction is only supported via server API. Please upload via the chat interface.",
-  };
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/extract-pdf", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: "Failed to extract PDF content",
+      };
+    }
+
+    const result = await response.json();
+
+    if (result.success) {
+      return { success: true, content: result.content };
+    } else {
+      return { success: false, error: result.error };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to extract PDF content",
+    };
+  }
 }
 
 /**
