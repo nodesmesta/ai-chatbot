@@ -1,4 +1,4 @@
-import pdf from "pdf-parse";
+import * as pdfParse from "pdf-parse";
 
 export interface FileContentResult {
   success: boolean;
@@ -26,7 +26,10 @@ export async function extractPdfContentServer(
     // Convert ArrayBuffer to Buffer for pdf-parse
     const buffer = Buffer.from(arrayBuffer);
 
-    const data = await pdf(buffer);
+    // pdf-parse exports a function as the default export
+    // Access it via the module's default property or call directly
+    const pdfFunc = (pdfParse as any).default || pdfParse;
+    const data = await pdfFunc(buffer);
 
     const normalizedText = normalizeText(data.text);
 

@@ -1,5 +1,4 @@
 "use client";
-import * as pdfjsLib from "pdfjs-dist";
 
 export interface FileContentResult {
   success: boolean;
@@ -7,18 +6,13 @@ export interface FileContentResult {
   error?: string;
 }
 
-// Initialize PDF.js worker
-if (typeof window !== "undefined") {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-}
-
 /**
  * Normalize text by replacing non-breaking spaces and cleaning up whitespace
  */
 function normalizeText(text: string): string {
   return text
-    .replace(/\u00a0/g, " ") // Replace non-breaking spaces with regular spaces
-    .replace(/\s+/g, " ") // Collapse multiple spaces/newlines into single space
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -43,48 +37,16 @@ export async function extractTextContent(file: File): Promise<FileContentResult>
 }
 
 /**
- * Extract content from PDF using client-side pdfjs-dist
+ * Extract content from PDF using client-side PDF.js
+ * Note: For client-side PDF extraction, we use a simple fallback since pdfjs-dist is removed
  */
 async function extractPdfContent(file: File): Promise<FileContentResult> {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdf = await loadingTask.promise;
-
-    let fullText = "";
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-
-      const pageText = textContent.items
-        .map((item: any) => {
-          if ("str" in item && item.str) return item.str;
-          if ("contents" in item && item.contents) return item.contents;
-          return "";
-        })
-        .join(" ");
-
-      fullText += pageText + "\n";
-    }
-
-    const normalizedText = normalizeText(fullText);
-
-    if (!normalizedText) {
-      return {
-        success: false,
-        error: "No text found in PDF (may be image-based or encrypted)",
-      };
-    }
-
-    return { success: true, content: normalizedText };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to extract PDF content",
-    };
-  }
+  // Client-side PDF extraction requires pdfjs-dist which is now removed
+  // The actual PDF extraction will be done server-side via API
+  return {
+    success: false,
+    error: "PDF extraction is only supported via server API. Please upload via the chat interface.",
+  };
 }
 
 /**
