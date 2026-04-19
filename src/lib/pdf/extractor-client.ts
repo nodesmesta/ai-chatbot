@@ -1,9 +1,25 @@
 "use client";
+import * as pdfjsLib from "pdfjs-dist";
 
 export interface FileContentResult {
   success: boolean;
   content?: string;
   error?: string;
+}
+
+// Initialize PDF.js worker
+if (typeof window !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+}
+
+/**
+ * Normalize text by replacing non-breaking spaces and cleaning up whitespace
+ */
+function normalizeText(text: string): string {
+  return text
+    .replace(/\u00a0/g, " ") // Replace non-breaking spaces with regular spaces
+    .replace(/\s+/g, " ") // Collapse multiple spaces/newlines into single space
+    .trim();
 }
 
 /**
@@ -27,33 +43,42 @@ export async function extractTextContent(file: File): Promise<FileContentResult>
 }
 
 /**
- * Extract content from PDF using server API
- * Client cannot extract PDF directly - must use server API
+ * Extract content from PDF using client-side pdfjs-dist
  */
 async function extractPdfContent(file: File): Promise<FileContentResult> {
   try {
-    const formData = new FormData();
-    formData.append("file", file);
+    const arrayBuffer = await file.arrayBuffer();
 
-    const response = await fetch("/api/extract-pdf", {
-      method: "POST",
-      body: formData,
-    });
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
 
-    if (!response.ok) {
+    let fullText = "";
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+
+      const pageText = textContent.items
+        .map((item: any) => {
+          if ("str" in item && item.str) return item.str;
+          if ("contents" in item && item.contents) return item.contents;
+          return "";
+        })
+        .join(" ");
+
+      fullText += pageText + "\n";
+    }
+
+    const normalizedText = normalizeText(fullText);
+
+    if (!normalizedText) {
       return {
         success: false,
-        error: "Failed to extract PDF content",
+        error: "No text found in PDF (may be image-based or encrypted)",
       };
     }
 
-    const result = await response.json();
-
-    if (result.success) {
-      return { success: true, content: result.content };
-    } else {
-      return { success: false, error: result.error };
-    }
+    return { success: true, content: normalizedText };
   } catch (error) {
     return {
       success: false,
