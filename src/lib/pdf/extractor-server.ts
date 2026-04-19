@@ -1,4 +1,4 @@
-import * as pdfjsLib from "pdfjs-dist";
+import pdf from "pdf-parse";
 
 export interface FileContentResult {
   success: boolean;
@@ -17,35 +17,18 @@ function normalizeText(text: string): string {
 }
 
 /**
- * Extract text content from PDF using pdfjs-dist (server-side)
+ * Extract text content from PDF using pdf-parse (server-side, no browser dependencies)
  */
 export async function extractPdfContentServer(
   arrayBuffer: ArrayBuffer
 ): Promise<FileContentResult> {
   try {
-    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-    const pdf = await loadingTask.promise;
+    // Convert ArrayBuffer to Buffer for pdf-parse
+    const buffer = Buffer.from(arrayBuffer);
 
-    let fullText = "";
-    const maxPages = pdf.numPages;
+    const data = await pdf(buffer);
 
-    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-
-      const pageText = textContent.items
-        .map((item: any) => {
-          if ("str" in item && item.str) return item.str;
-          if ("contents" in item && item.contents) return item.contents;
-          if ("text" in item && item.text) return item.text;
-          return "";
-        })
-        .join(" ");
-
-      fullText += pageText + "\n";
-    }
-
-    const normalizedText = normalizeText(fullText);
+    const normalizedText = normalizeText(data.text);
 
     if (!normalizedText) {
       return {
