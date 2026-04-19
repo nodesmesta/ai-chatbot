@@ -1,4 +1,4 @@
-import * as pdfParse from "pdf-parse";
+import * as pdfjsLib from "pdfjs-dist";
 
 export interface FileContentResult {
   success: boolean;
@@ -17,21 +17,35 @@ function normalizeText(text: string): string {
 }
 
 /**
- * Extract text content from PDF using pdf-parse (server-side, no browser dependencies)
+ * Extract text content from PDF using pdfjs-dist (server-side)
  */
 export async function extractPdfContentServer(
   arrayBuffer: ArrayBuffer
 ): Promise<FileContentResult> {
   try {
-    // Convert ArrayBuffer to Buffer for pdf-parse
-    const buffer = Buffer.from(arrayBuffer);
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
 
-    // pdf-parse exports a function as the default export
-    // Access it via the module's default property or call directly
-    const pdfFunc = (pdfParse as any).default || pdfParse;
-    const data = await pdfFunc(buffer);
+    let fullText = "";
+    const maxPages = pdf.numPages;
 
-    const normalizedText = normalizeText(data.text);
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+
+      const pageText = textContent.items
+        .map((item: any) => {
+          if ("str" in item && item.str) return item.str;
+          if ("contents" in item && item.contents) return item.contents;
+          if ("text" in item && item.text) return item.text;
+          return "";
+        })
+        .join(" ");
+
+      fullText += pageText + "\n";
+    }
+
+    const normalizedText = normalizeText(fullText);
 
     if (!normalizedText) {
       return {
