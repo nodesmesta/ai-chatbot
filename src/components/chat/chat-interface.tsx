@@ -6,6 +6,7 @@ import { MessageBubble } from "./message-bubble";
 import { SearchStatus } from "./search-status";
 import { extractFileContent } from "@/lib/pdf/extractor-client";
 import type { Source } from "../ui/source-card";
+import { extractSourcesFromContent, removeSourceSection } from "@/lib/ai/search-utils";
 import { SparklesIcon } from "lucide-react";
 
 export interface ChatSession {
@@ -60,66 +61,6 @@ const SUPPORTED_FILE_TYPES = [
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-function extractSources(content: string): { mainContent: string; sources: Source[] } {
-  const sources: Source[] = [];
-  let mainContent = content;
-
-  const sourceMatch = content.match(/(?:\*\*|__)?\s*(?:Sumber|Referensi|Sources|References)\s*(?:\*\*|__)?\s*:?\s*\n([\s\S]*?)(?=\n\n|\Z)/i);
-
-  if (sourceMatch) {
-    const sourceSection = sourceMatch[1];
-    const sourceLinks = sourceSection.match(/\[([^\]]+)\]\(([^)]+)\)/g);
-    if (sourceLinks) {
-      for (const link of sourceLinks) {
-        const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (match) {
-          const url = match[2];
-          const domain = url.replace(/^https?:\/\//, "").split("/")[0];
-          if (!sources.some((s) => s.url === url)) {
-            sources.push({
-              title: match[1],
-              url: url,
-              domain: domain,
-            });
-          }
-        }
-      }
-    }
-    mainContent = content.replace(sourceMatch[0], "");
-  }
-
-  if (sources.length === 0) {
-    const allLinks = content.match(/\[([^\]]+)\]\(([^)]+)\)/g);
-    if (allLinks) {
-      for (const link of allLinks) {
-        const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (match) {
-          const url = match[2];
-          const domain = url.replace(/^https?:\/\//, "").split("/")[0];
-          if (!sources.some((s) => s.url === url)) {
-            sources.push({
-              title: match[1],
-              url: url,
-              domain: domain,
-            });
-          }
-        }
-      }
-    }
-  }
-
-  mainContent = mainContent
-    .replace(/(\d+)\.\s*\n+/g, "$1. ")
-    .replace(/([-*])\s*\n+/g, "$1 ");
-
-  mainContent = mainContent.replace(/(\d+\.)\s*\n+\s*/g, "$1 ");
-  mainContent = mainContent.replace(/([-*])\s*\n+\s*/g, "$1 ");
-
-  mainContent = mainContent.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1").trim();
-
-  return { mainContent, sources };
-}
 
 function SearchIcon() {
   return (
@@ -355,7 +296,7 @@ const ensureTextareaVisible = () => {
         processedContent = processedContent.replace(/([-*])\s*/g, "$1 ");
         processedContent = processedContent.replace(/(\*\*[^*]+\*\*)\s*\n\s*(\[)/g, "$1 $2");
 
-        const { sources } = extractSources(processedContent);
+        const { sources } = extractSourcesFromContent(processedContent);
         if (sources.length > 0) {
           setMessages(prev => {
             if (assistantMessageRef.current === null) return prev;
@@ -586,7 +527,7 @@ const ensureTextareaVisible = () => {
         processedContent = processedContent.replace(/([-*])\s*/g, "$1 ");
         processedContent = processedContent.replace(/(\*\*[^*]+\*\*)\s*\n\s*(\[)/g, "$1 $2");
 
-        const { sources } = extractSources(processedContent);
+        const { sources } = extractSourcesFromContent(processedContent);
         if (sources.length > 0) {
           setMessages((prev) => {
             if (assistantMessageRef.current === null) return prev;

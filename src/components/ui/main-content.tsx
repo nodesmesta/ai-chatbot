@@ -1,5 +1,6 @@
 "use client";
 
+import { extractSourcesFromContent, removeSourceSection } from "@/lib/ai/search-utils";
 import { CopyButton } from "../common/copy-button";
 import { BookIcon, ChevronDownIcon, ChevronUpIcon } from "./source-list";
 import type { Source } from "./source-card";
@@ -57,124 +58,6 @@ function preprocessContent(content: string): string {
   return processedLines.join("\n");
 }
 
-function extractSources(content: string): { mainContent: string; sources: Source[] } {
-  const sources: Source[] = [];
-  const lines = content.split("\n");
-
-  // First, find and mark lines with malformed links (links without closing parenthesis)
-  const malformedLineIndices = new Set<number>();
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Check for malformed link: [text](url without closing )
-    // Pattern: has [ but url part doesn't end with ) before end of line or next whitespace
-    const malformedLinkPattern = /\[([^\]]+)\]\(https?:\/\/[^\)]*$|^[^\]]*\[([^\]]+)\]\([^)\s]+$/;
-    if (malformedLinkPattern.test(line.trim())) {
-      malformedLineIndices.add(i);
-    }
-  }
-
-  // Find ALL valid markdown links in content
-  const allLinks: Array<{ lineIndex: number; title: string; url: string; domain: string }> = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Find all markdown links in this line (must have closing parenthesis)
-    const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g;
-    let match;
-
-    while ((match = linkRegex.exec(line)) !== null) {
-      const url = match[2];
-      const domain = url.replace(/^https?:\/\//, "").split("/")[0];
-      allLinks.push({
-        lineIndex: i,
-        title: match[1],
-        url,
-        domain,
-      });
-    }
-  }
-
-  // Find the "Sumber:" or "References:" section
-  let sourcesSectionStart = -1;
-  const sourceLabelRegex = /^(Sumber:|Referensi:|Sources:|References:)\s*$/i;
-
-  for (let i = 0; i < lines.length; i++) {
-    if (sourceLabelRegex.test(lines[i].trim())) {
-      sourcesSectionStart = i + 1;
-      break;
-    }
-  }
-
-  const footnoteLineIndices = new Set<number>();
-
-  // If we found a sources section, all valid links after it are footnotes
-  if (sourcesSectionStart !== -1) {
-    for (const link of allLinks) {
-      if (link.lineIndex >= sourcesSectionStart) {
-        footnoteLineIndices.add(link.lineIndex);
-      }
-    }
-  } else {
-    // Fallback: use the original logic for links at the end with no content after
-    for (const link of allLinks) {
-      const lineIndex = link.lineIndex;
-      const line = lines[lineIndex].trim();
-
-      // Check if this line only contains this link (with optional list prefix: -, *, or numbered)
-      const isLinkOnlyLine = /^(\s*[-*]\s*|\s*\d+\.\s*)\[([^\]]+)\]\(https?:\/\/[^\)]+\)\)?$/i.test(line);
-
-      if (isLinkOnlyLine) {
-        // Check if there's any non-empty content after this line
-        let hasContentAfter = false;
-        for (let i = lineIndex + 1; i < lines.length; i++) {
-          if (lines[i].trim().length > 0) {
-            hasContentAfter = true;
-            break;
-          }
-        }
-
-        // If no content after, it's a footnote
-        if (!hasContentAfter) {
-          footnoteLineIndices.add(lineIndex);
-        }
-      }
-    }
-  }
-
-  // Extract footnote links to sources
-  for (const link of allLinks) {
-    if (footnoteLineIndices.has(link.lineIndex)) {
-      if (!sources.some((s) => s.url === link.url)) {
-        sources.push({ title: link.title, url: link.url, domain: link.domain });
-      }
-    }
-  }
-
-  // Also extract inline links to sources (links not in footnote section)
-  for (const link of allLinks) {
-    if (!footnoteLineIndices.has(link.lineIndex)) {
-      if (!sources.some((s) => s.url === link.url)) {
-        sources.push({ title: link.title, url: link.url, domain: link.domain });
-      }
-    }
-  }
-
-  // Build content: remove footnote lines, malformed lines, and source label line
-  const contentLines = lines.filter((_, index) => {
-    // Remove footnote lines
-    if (footnoteLineIndices.has(index)) return false;
-    // Remove malformed link lines
-    if (malformedLineIndices.has(index)) return false;
-    // Remove source label line
-    if (sourcesSectionStart > 0 && index === sourcesSectionStart - 1) return false;
-    return true;
-  });
-
-  const mainContent = contentLines.join("\n").trim();
-
-  return { mainContent, sources };
-}
 
 interface MainContentProps {
   content: string;
@@ -185,8 +68,9 @@ interface MainContentProps {
 export function MainContent({ content, sources = [], onRetry }: MainContentProps) {
   // Preprocess content to fix numbered list formatting before extraction
   const processedContent = preprocessContent(content);
-  const { mainContent, sources: extractedSources } = extractSources(processedContent);
-  const allSources = sources.length > 0 ? sources : extractedSources;
+  const extractedSources = extractSourcesFromContent(processedContent);
+  // Use extracted sources directly
+  const allSources = extractedSources;
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
