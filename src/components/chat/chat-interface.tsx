@@ -707,7 +707,7 @@ const ensureTextareaVisible = () => {
   };
 
   return (
-    <div className="h-[100dvh] bg-[#1a1a1a] text-white font-normal flex overflow-hidden">
+    <div className="h-screen bg-[#1a1a1a] text-white font-normal flex overflow-hidden">
       {isRenameModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={handleCloseRenameModal} />
@@ -898,14 +898,15 @@ const ensureTextareaVisible = () => {
       onKeyDown={handleKeyDown}
       onFocus={() => {
     setIsFocused(true);
-    ensureTextareaVisible();
+    //* ensureTextareaVisible(); */
+  // Disabled - causes scroll issues during AI response
   }}
       onBlur={() => setIsFocused(false)}
       placeholder="Ask anything..."
       rows={4}
       disabled={isLoading}
       className="flex-1 px-3 py-1.5 bg-transparent resize-none focus:outline-none max-h-48 text-base"
-      style={{ minHeight: "120px" }}
+      style={{ minHeight: "80px" }}
     />
     <button
       type="button"
