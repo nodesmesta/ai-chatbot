@@ -246,12 +246,15 @@ export default function ChatInterface() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 const scrollToBottom = () => {
-  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const main = messagesEndRef.current?.closest("main");
+  if (main) {
+    main.scrollTop = main.scrollHeight;
+  }
 };
 
 const ensureTextareaVisible = () => {
   setTimeout(() => {
-    textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    textareaRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
   }, 100);
 };
 
