@@ -68,7 +68,7 @@ interface MainContentProps {
 export function MainContent({ content, sources = [], onRetry }: MainContentProps) {
   // Preprocess content to fix numbered list formatting before extraction
   const processedContent = preprocessContent(content);
-  const extractedSources = extractSourcesFromContent(processedContent);
+  const { mainContent, sources: extractedSources } = extractSourcesFromContent(processedContent);
   // Use extracted sources directly
   const allSources = extractedSources;
   const [isExpanded, setIsExpanded] = useState(false);

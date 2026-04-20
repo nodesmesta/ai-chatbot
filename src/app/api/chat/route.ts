@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchWeb, formatSearchResults } from "@/lib/ai/search";
 import { vectorizeService } from "@/lib/ai/vectorize";
 
-// Maximum retry attempts for invalid/incomplete responses
-const MAX_RETRY_ATTEMPTS = 2;
-
-}
 
 // NVIDIA NIM model configuration
 // For multimodal (image) support, use llama-3.2-vision model

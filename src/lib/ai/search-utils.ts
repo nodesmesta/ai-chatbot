@@ -63,7 +63,7 @@ export async function checkUrlAccessibility(url: string, timeoutMs: number = 500
  * Consolidated source extraction from content
  * Replaces duplicate implementations in chat-interface.tsx, main-content.tsx, and route.ts
  */
-export function extractSourcesFromContent(content: string): Source[] {
+export function extractSourcesFromContent(content: string): { mainContent: string; sources: Source[] } {
   const sources: Source[] = [];
   const lines = content.split('\n');
 
@@ -157,7 +157,22 @@ export function extractSourcesFromContent(content: string): Source[] {
     }
   }
 
-  return sources;
+  // Build mainContent by removing footnote lines and source label
+  const contentLines = lines.filter((_, index) => {
+    if (footnoteLineIndices.has(index)) return false;
+    if (sourcesSectionStart > 0 && index === sourcesSectionStart - 1) return false;
+    return true;
+  });
+
+  let mainContent = contentLines.join('\n')
+    .replace(/(\d+)\.\s*\n+/g, '$1. ')
+    .replace(/([-*])\s*\n+/g, '$1 ')
+    .replace(/(\d+\.)\s*\n+\s*/g, '$1 ')
+    .replace(/([-*])\s*\n+\s*/g, '$1 ')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+    .trim();
+
+  return { mainContent, sources };
 }
 
 /**
