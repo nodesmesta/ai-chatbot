@@ -38,17 +38,11 @@ RESPONSE COMPLETENESS RULES:
 16. Take time to provide a thorough, comprehensive answer
 17. Before ending your response, ask yourself: "Is this complete? Did I finish all thoughts?"`;
 
-// Keywords yang tidak memerlukan search web
+// Keywords yang MENYEBUTKAN tidak perlu search (greetings, casual chat)
 const NO_SEARCH_KEYWORDS = [
   "halo", "hi", "hello", "pagi", "siang", "sore", "malam",
   "apa kabar", "how are you", "terima kasih", "thanks",
-  "gunakan bahasa", "pakai bahasa", "speak indonesia", "bahasa indonesia",
   "nama kamu", "who are you", "apa nama kamu", "what is your name",
-  "buatkan", "tulis", "write", "code", "coding", "contoh", "example",
-  "hitung", "calculate", "matematika", "math",
-  "terjemahkan", "translate", "artinya", "what does", "mean",
-  "cerita", "story", "lelucon", "joke", "puisi", "poem",
-  "sapa", "greeting", "perkenalan", "introduce",
 ];
 
 async function shouldSearchWeb(
@@ -58,82 +52,17 @@ async function shouldSearchWeb(
   const lastMessage = [...messages].reverse().find(m => m.role === "user")?.content || "";
   const lowerMessage = lastMessage.toLowerCase();
 
-  const hasNoSearchKeyword = NO_SEARCH_KEYWORDS.some(keyword =>
-    lowerMessage.includes(keyword.toLowerCase())
+  // ONLY skip search for clear greetings/casual chat
+  const isGreeting = NO_SEARCH_KEYWORDS.some(keyword =>
+    lowerMessage === keyword.toLowerCase() || lowerMessage.startsWith(keyword.toLowerCase() + " ")
   );
 
-  if (hasNoSearchKeyword) {
-    return { search: false, query: lastMessage };
-  }
+  // For ALL other queries, ALWAYS search to ensure up-to-date information
+  // This ensures the AI can answer questions about current events, news, etc.
+  const shouldSearch = !isGreeting;
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    const decisionResponse = await fetch(
-      "https://integrate.api.nvidia.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            {
-              role: "system",
-              content: `You are a query classifier. Determine if the user's question requires searching the web for current information.
-
-Return ONLY a JSON object with this format: {"need_search": true/false}
-
-Return true if the question is about:
-- Current events, news, or recent information
-- Factual questions that may have changed
-- Specific data, statistics, or research
-- People, places, or things that need verification
-- Time-sensitive information
-- Who is [position] now/currently questions
-
-Return false if the question is about:
-- Greetings or casual conversation
-- General knowledge that hasn't changed
-- Creative tasks (writing, storytelling, jokes)
-- Code or technical help
-- Translations
-- Math or calculations
-- Personal opinions or advice`,
-            },
-            { role: "user", content: lastMessage },
-          ],
-          temperature: 0.60,
-          max_tokens: 50,
-        }),
-        signal: controller.signal,
-      }
-    );
-
-    clearTimeout(timeoutId);
-
-    if (!decisionResponse.ok) {
-      console.error("Decision API error:", await decisionResponse.text());
-      return { search: true, query: lastMessage };
-    }
-
-    const decisionData = await decisionResponse.json() as { choices?: Array<{ message?: { content?: string } }> };
-    const content = decisionData.choices?.[0]?.message?.content || "";
-
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      const decision = jsonMatch ? JSON.parse(jsonMatch[0]) : { need_search: true };
-      return { search: decision.need_search === true, query: lastMessage };
-    } catch {
-      return { search: true, query: lastMessage };
-    }
-  } catch (error) {
-    console.error("Decision error:", error);
-    return { search: true, query: lastMessage };
-  }
+  console.log(shouldSearch ? "Search enabled for:" : "Search skipped for:", lastMessage);
+  return { search: shouldSearch, query: lastMessage };
 }
 
 function createEnhancedPromptWithValidation(lastUserMessage: string, searchContext: string): string {
