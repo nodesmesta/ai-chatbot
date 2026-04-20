@@ -1,31 +1,24 @@
-# Next.js Framework Starter with AI Chatbot
+# AI Chatbot with Next.js
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/next-starter-template)
+An AI-powered chatbot with automatic web search capabilities and PDF support, built with Next.js 16 and deployed on Vercel.
 
-## Overview
+## Features
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app). It's deployed on Cloudflare Workers as a [static website](https://developers.cloudflare.com/workers/static-assets/).
-
-## AI Chatbot Features
-
-This project includes a fully functional AI chatbot with **automatic web search** capabilities:
-
-### Core Features
-- **🔍 Automatic Web Search** - Every response includes real-time web search using Tavily API
+- **🔍 Automatic Web Search** - Real-time web search using Tavily API for up-to-date information
+- **📄 PDF Extraction** - Extract text content from PDF files for AI analysis
 - **📡 Streaming Responses** - Real-time AI responses using Server-Sent Events (SSE)
-- **💾 Chat History** - Persistent chat history in browser localStorage
-- **🤖 NVIDIA NIM Integration** - Powered by NVIDIA's inference microservices
-- **☁️ Cloudflare Vectorize** - Optional vector storage for search results
-- **📝 Markdown Rendering** - Beautifully formatted AI responses with code blocks, lists, etc.
-- **📄 PDF OCR Support** - Image-based PDF scanning using Llama 3.2 Vision (requires Ghostscript)
+- **💾 Chat History** - Persistent chat history stored in browser localStorage
+- **🤖 NVIDIA NIM Integration** - Powered by NVIDIA's inference microservices (Llama, Mixtral, etc.)
+- **🎨 Modern UI** - Clean, responsive interface with Tailwind CSS
 
-### How It Works
+## How It Works
 
-1. User sends a message
-2. Chatbot automatically searches the web for relevant information using Tavily API
-3. Search results are used as context for the AI
-4. AI generates a response based on the latest information
-5. Response is streamed back to the user in real-time
+1. User sends a message (with or without PDF attachment)
+2. For PDF files: text is extracted server-side using pdf-parse
+3. Chatbot automatically searches the web for relevant information
+4. Search results provide context for the AI response
+5. AI generates a response based on the latest information
+6. Response is streamed back to the user in real-time
 
 Access the chatbot at `/chat` route.
 
@@ -33,10 +26,10 @@ Access the chatbot at `/chat` route.
 
 - **Frontend**: Next.js 16, React 19, TypeScript
 - **Styling**: Tailwind CSS
-- **AI**: NVIDIA NIM (Qwen, Llama, Mixtral, etc.)
+- **AI**: NVIDIA NIM (Llama, Mixtral, Qwen, etc.)
 - **Search**: Tavily API (web search)
-- **Vector Store**: Cloudflare Vectorize (optional)
-- **Deployment**: Cloudflare Workers via OpenNext
+- **PDF Processing**: pdf-parse (server-side text extraction)
+- **Deployment**: Vercel (or any Next.js hosting)
 
 ## Getting Started
 
@@ -59,9 +52,8 @@ Required environment variables:
 - `TAVILY_API_KEY` - Get from https://tavily.com/
 
 Optional:
-- `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
-- `CLOUDFLARE_API_TOKEN` - For Vectorize integration
-- `ENABLE_WEB_SEARCH` - Set to `true` to enable web search (default: true)
+- `NVIDIA_NIM_MODEL` - Model to use (default: `meta/llama-3.2-90b-vision-instruct`)
+- `ENABLE_WEB_SEARCH` - Set to `false` to disable web search (default: true)
 
 ### 3. Run Development Server
 
@@ -71,14 +63,30 @@ npm run dev
 
 Open [http://localhost:3000/chat](http://localhost:3000/chat) to start chatting!
 
-## Deploying To Production
+## Deploying to Production
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import your repository at [vercel.com/new](https://vercel.com/new)
+3. Add environment variables in Vercel dashboard
+4. Deploy!
+
+Or use the Vercel CLI:
+
+```bash
+npm install -g vercel
+vercel deploy
+```
+
+### Build Commands
 
 | Command | Action |
-| :-------------------------------- | :------------------------------------------- |
-| `npm run build` | Build your production site |
-| `npm run preview` | Preview your build locally, before deploying |
-| `npm run build && npm run deploy` | Deploy your production site to Cloudflare |
-| `npm wrangler tail` | View real-time logs for all Workers |
+| :--- | :--- |
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
 
 ## Project Structure
 
@@ -87,40 +95,57 @@ chatbot-ai/
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   └── chat/
-│   │   │       └── route.ts          # Chat API with web search
+│   │   │   ├── chat/
+│   │   │   │   └── route.ts      # Chat API with web search
+│   │   │   └── extract-pdf/
+│   │   │       └── route.ts      # PDF extraction API
 │   │   ├── chat/
-│   │   │   └── page.tsx              # Chatbot UI
+│   │   │   └── page.tsx          # Chatbot UI
 │   │   ├── layout.tsx
 │   │   ├── page.tsx
 │   │   └── globals.css
+│   ├── components/
+│   │   ├── chat/
+│   │   │   ├── chat-interface.tsx
+│   │   │   ├── message-bubble.tsx
+│   │   │   └── sidebar.tsx
+│   │   └── ui/
 │   ├── lib/
-│   │   ├── search.ts                 # Tavily search service
-│   │   └── vectorize.ts              # Cloudflare Vectorize service
+│   │   ├── ai/
+│   │   │   ├── search.ts         # Tavily search service
+│   │   │   └── vectorize.ts      # Optional vector storage
+│   │   └── pdf/
+│   │       ├── extractor-client.ts
+│   │       └── extractor-server.ts
 ├── .env.example
 ├── README.md
-├── WEB_SEARCH_GUIDE.md               # Web search documentation
+├── next.config.ts
 └── package.json
 ```
 
 ## API Keys Required
 
 ### NVIDIA NIM
-- Get API key: https://build.nvidia.com/
-- Used for: LLM inference and embeddings
+- **Get API key**: https://build.nvidia.com/
+- **Used for**: LLM inference and embeddings
+- **Free tier**: Available with signup
 
 ### Tavily
-- Get API key: https://tavily.com/
-- Free tier: 1,000 queries/month
-- Used for: Web search
+- **Get API key**: https://tavily.com/
+- **Used for**: Web search
+- **Free tier**: 1,000 queries/month
 
-### Cloudflare (Optional)
-- Get from: Cloudflare Dashboard
-- Used for: Vectorize storage
+## PDF Extraction
+
+The app supports PDF text extraction:
+- Upload PDF files in the chat interface
+- Text is extracted server-side using `pdf-parse`
+- Extracted content is sent to the AI for analysis
+- Supports text-based PDFs (not image-only PDFs)
 
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [NVIDIA NIM Documentation](https://docs.api.nvidia.com/)
 - [Tavily API Documentation](https://docs.tavily.com/)
-- [Cloudflare Vectorize Documentation](https://developers.cloudflare.com/vectorize/)
+- [Vercel Documentation](https://vercel.com/docs)
