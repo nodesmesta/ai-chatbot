@@ -765,7 +765,7 @@ const ensureTextareaVisible = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto w-full scroll-smooth ">
+        <main className="flex-1 overflow-y-auto w-full scroll-smooth pb-32">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full px-4">
               <div className="text-center max-w-lg w-full px-4 sm:px-6">
