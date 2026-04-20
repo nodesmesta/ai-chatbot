@@ -245,9 +245,15 @@ export default function ChatInterface() {
   const assistantMessageRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+const scrollToBottom = () => {
+  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+};
+
+const ensureTextareaVisible = () => {
+  setTimeout(() => {
+    textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, 100);
+};
 
   const handleRetryLastResponse = async () => {
     if (messages.length === 0) return;
@@ -701,7 +707,7 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="h-screen bg-[#1a1a1a] text-white font-normal flex overflow-hidden">
+    <div className="h-[100dvh] bg-[#1a1a1a] text-white font-normal flex overflow-hidden">
       {isRenameModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={handleCloseRenameModal} />
@@ -744,7 +750,7 @@ export default function ChatInterface() {
       {isMobileSidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setIsMobileSidebarOpen(false)} />}
 
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        <header className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2 bg-[#0a0e17] border-b border-[#1e293b] flex-shrink-0">
+        <header className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2 flex-shrink-0">
           <div className="flex items-center gap-2">
             <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden p-2 hover:bg-[#121826] rounded-lg transition-colors text-[#8a9bb8]">
               <MenuIcon />
@@ -856,8 +862,8 @@ export default function ChatInterface() {
           )}
         </main>
 
-        <footer className="border-t border-[#1e293b] bg-[#0a0e17] flex-shrink-0">
-          <div className="max-w-4xl mx-auto w-full px-3 sm:px-6 py-2 sm:py-6">
+        <footer className="flex-shrink-0">
+          <div className="max-w-3xl mx-auto w-full px-3 sm:px-6 py-2 sm:py-6">
             <form onSubmit={handleSubmit}>
               {attachedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
@@ -876,46 +882,49 @@ export default function ChatInterface() {
                   ))}
                 </div>
               )}
-              <div className={`flex items-end gap-2 p-2 bg-[#1e293b] rounded-lg border ${isFocused ? "border-white" : "border-[#334155]"}`}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.csv,.json,image/*,application/pdf,text/plain,text/csv,application/json"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={openFilePicker}
-                  disabled={isLoading}
-                  className="flex-shrink-0 flex items-center justify-center w-9 h-9 text-[#8a9bb8] hover:text-white hover:bg-[#1e293b] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Attach file"
-                >
-                  <PlusIcon />
-                </button>
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  placeholder="Ask anything..."
-                  rows={4}
-                  disabled={isLoading}
-                  className="flex-1 px-2 py-1.5 bg-transparent resize-none focus:outline-none max-h-48 text-base"
-                  style={{ minHeight: "100px" }}
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
-                  className="flex-shrink-0 flex items-center justify-center w-9 h-9 text-white hover:bg-white/20 hover:rounded-full disabled:text-[#334155] disabled:cursor-not-allowed transition-all"
-                >
-                  <SendIcon />
-                </button>
-              </div>
-              <p className="mt-2 sm:mt-3 text-[10px] text-center text-[#8a9bb8]">AI can make mistakes. Consider checking important information.</p>
+  <div className="flex items-end gap-2 p-1.5 bg-[#1e293b] rounded-3xl">
+    <input
+      ref={fileInputRef}
+      type="file"
+      multiple
+      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.csv,.json,image/*,application/pdf,text/plain,text/csv,application/json"
+      onChange={handleFileSelect}
+      className="hidden"
+    />
+    <textarea
+      ref={textareaRef}
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      onKeyDown={handleKeyDown}
+      onFocus={() => {
+    setIsFocused(true);
+    ensureTextareaVisible();
+  }}
+      onBlur={() => setIsFocused(false)}
+      placeholder="Ask anything..."
+      rows={4}
+      disabled={isLoading}
+      className="flex-1 px-3 py-1.5 bg-transparent resize-none focus:outline-none max-h-48 text-base"
+      style={{ minHeight: "120px" }}
+    />
+    <button
+      type="button"
+      onClick={openFilePicker}
+      disabled={isLoading}
+      className="flex-shrink-0 flex items-center justify-center w-9 h-9 text-[#8a9bb8] hover:text-white hover:bg-[#1e293b] rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      title="Attach file"
+    >
+      <PlusIcon />
+    </button>
+    <button
+      type="submit"
+      disabled={isLoading || (!input.trim() && attachedFiles.length === 0)}
+      className="flex-shrink-0 flex items-center justify-center w-9 h-9 text-white hover:bg-white/20 hover:rounded-full disabled:text-[#334155] disabled:cursor-not-allowed transition-all"
+    >
+      <SendIcon />
+    </button>
+  </div>
+              <p className="mt-2 sm:mt-3 text-xs text-center text-[#8a9bb8]">AI can make mistakes. Consider checking important information.</p>
             </form>
           </div>
         </footer>

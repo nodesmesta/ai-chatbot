@@ -108,16 +108,17 @@ export function Sidebar({
       <aside
         className={`
           fixed lg:static top-0 left-0 h-full
-          bg-[#030712] border-r border-[#1e293b]
+          bg-[#0a0e17] shadow-2xl 
           z-50 lg:z-0
           transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
           w-72 lg:w-72
           overflow-hidden
+    lg:rounded-none rounded-r-2xl
         `}
       >
         <div className="flex flex-col h-full min-h-0">
-          <div className="flex items-center justify-between p-3 border-b border-[#1e293b] flex-shrink-0">
+          <div className="flex items-center justify-between p-3 flex-shrink-0">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <img src="/nodesemesta.png" alt="Logo" className="w-5 h-5 rounded-full object-cover flex-shrink-0 ring-1 ring-transparent" />
               <span className="font-semibold text-sm text-[#f1f5f9] truncate">Chats</span>
@@ -151,10 +152,10 @@ export function Sidebar({
                 {sessions.map((session) => (
                   <div key={session.id} className="group relative" onClick={() => handleSelectSession(session.id)}>
                     <div
-                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all ${
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-2xl cursor-pointer transition-all ${
                         currentSessionId === session.id
-                          ? "bg-[#1e293b] border border-[#334155]"
-                          : "hover:bg-[#1e293b] border border-transparent"
+                          ? "bg-[#1e293b]"
+                          : "hover:bg-[#1e293b]"
                       }`}
                     >
                       <div className="flex-1 min-w-0">
@@ -171,7 +172,7 @@ export function Sidebar({
 
                     {activeMenuId === session.id && (
                       <div
-                        className="absolute right-0 top-full mt-1 w-44 bg-[#1e293b] border border-[#334155] rounded-lg shadow-lg z-10 overflow-hidden"
+                        className="absolute right-0 top-full mt-1 w-44 bg-[#1e293b] rounded-lg shadow-lg z-10 overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
@@ -196,7 +197,7 @@ export function Sidebar({
             )}
           </div>
 
-          <div className="p-3 border-t border-[#1e293b] flex-shrink-0">
+          <div className="p-3 flex-shrink-0">
             <p className="text-[10px] text-[#94a3b8] text-center">
               {sessions.length} conversation{sessions.length !== 1 ? "s" : ""}
             </p>
