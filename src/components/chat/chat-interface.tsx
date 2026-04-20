@@ -749,7 +749,7 @@ const ensureTextareaVisible = () => {
 
       {isMobileSidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setIsMobileSidebarOpen(false)} />}
 
-      <div className="flex-1 flex flex-col min-w-0 h-full">
+      <div className="flex-1 flex flex-col min-w-0">
         <header className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2 flex-shrink-0">
           <div className="flex items-center gap-2">
             <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden p-2 hover:bg-[#121826] rounded-lg transition-colors text-[#8a9bb8]">
@@ -765,7 +765,7 @@ const ensureTextareaVisible = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto w-full scroll-smooth pb-32">
+        <main className="flex-1 overflow-y-auto w-full scroll-smooth pb-40">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full px-4">
               <div className="text-center max-w-lg w-full px-4 sm:px-6">
