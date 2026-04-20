@@ -246,10 +246,7 @@ export default function ChatInterface() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 const scrollToBottom = () => {
-  const main = messagesEndRef.current?.closest("main");
-  if (main) {
-    main.scrollTop = main.scrollHeight;
-  }
+  messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
 };
 
 const ensureTextareaVisible = () => {
