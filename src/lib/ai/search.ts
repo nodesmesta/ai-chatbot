@@ -66,25 +66,36 @@ async function searchDuckDuckGo(query: string, maxResults: number): Promise<Sear
 
 /**
  * Parse DuckDuckGo HTML results
+ * Uses a more robust approach to extract results from HTML
  */
 function parseDuckDuckGoResults(html: string, maxResults: number): SearchResult[] {
   const results: SearchResult[] = [];
   const seenUrls = new Set<string>();
 
-  // DuckDuckGo HTML structure: <a class="result__a" href="...">title</a>
-  // Snippet: <a class="result__snippet">content</a>
-  const resultRegex = /<a class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>[\s\S]*?<a class="result__snippet"[^>]*>([^<]+)<\/a>/g;
+  // Extract all result blocks using a simpler approach
+  // DuckDuckGo wraps each result in <div class="result__content"> or similar
+  const resultBlocks = html.match(/<div class="result__content">[\s\S]*?<\/div>/g) || [];
 
-  let match;
-  while ((match = resultRegex.exec(html)) !== null && results.length < maxResults) {
-    const url = match[1].replace('&amp;', '&');
-    const title = match[2].replace(/<[^>]*>/g, '').trim();
-    const snippet = match[3].replace(/<[^>]*>/g, '').trim();
+  for (const block of resultBlocks) {
+    if (results.length >= maxResults) break;
 
-    if (!url || !title || seenUrls.has(url)) continue;
+    // Extract title and URL from <a class="result__a">
+    const titleMatch = block.match(/<a class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/);
+    if (!titleMatch) continue;
 
-    // Skip non-http URLs and internal links
-    if (!url.startsWith('http') || url.includes('/html/')) continue;
+    let url = titleMatch[1].replace('&amp;', '&');
+    const title = titleMatch[2].replace(/<[^>]*>/g, '').trim();
+
+    // Skip if URL is invalid or internal
+    if (!url.startsWith('http') || url.includes('/html/') || url.includes('/y.js')) continue;
+    if (seenUrls.has(url)) continue;
+
+    // Extract snippet from <div class="result__snippet"> or <a class="result__snippet">
+    let snippet = '';
+    const snippetMatch = block.match(/<[^>]*class="result__snippet"[^>]*>([^<]+)<\/a>/);
+    if (snippetMatch) {
+      snippet = snippetMatch[1].replace(/<[^>]*>/g, '').trim();
+    }
 
     seenUrls.add(url);
     results.push({
@@ -96,15 +107,16 @@ function parseDuckDuckGoResults(html: string, maxResults: number): SearchResult[
     });
   }
 
-  // Fallback regex for simpler structure
+  // Fallback: if no results from structured parsing, try simpler regex
   if (results.length === 0) {
     const simpleRegex = /<a class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g;
+    let match;
     while ((match = simpleRegex.exec(html)) !== null && results.length < maxResults) {
-      const url = match[1].replace('&amp;', '&');
+      let url = match[1].replace('&amp;', '&');
       const title = match[2].replace(/<[^>]*>/g, '').trim();
 
-      if (!url || !title || seenUrls.has(url)) continue;
-      if (!url.startsWith('http') || url.includes('/html/')) continue;
+      if (!url.startsWith('http') || url.includes('/html/') || url.includes('/y.js')) continue;
+      if (seenUrls.has(url)) continue;
 
       seenUrls.add(url);
       results.push({
