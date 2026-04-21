@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchWeb, formatSearchResults } from "@/lib/ai/search";
+import { searchWeb, formatSearchResults } from "@/lib/ai/search-google";
 import { vectorizeService } from "@/lib/ai/vectorize";
 
 
