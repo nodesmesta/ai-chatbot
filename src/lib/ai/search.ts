@@ -265,13 +265,14 @@ export function formatSearchResults(results: SearchResult[]): string {
 
   const formatted = results
     .map((result, index) => {
-      return `
-**Sumber ${index + 1}:** [${result.title}](${result.url})
-**Konten:** ${result.content}
----
-`;
+      return `[RESULT ${index + 1}]
+URL: ${result.url}
+Title: ${result.title}
+Content: ${result.content}
+Domain: ${result.domain}
+---`;
     })
-    .join('\n');
+    .join('\n\n');
 
   return formatted;
 }

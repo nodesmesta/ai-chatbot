@@ -66,56 +66,52 @@ async function shouldSearchWeb(
 }
 
 function createEnhancedPromptWithValidation(lastUserMessage: string, searchContext: string): string {
-  return `Berdasarkan informasi terbaru yang saya temukan dari web:
+  return `CRITICAL: You HAVE been provided with EXACT search results from the web. You MUST use this information to answer - do NOT say you don't have access to real-time data.
 
-SEARCH_CONTEXT_START
+SEARCH RESULTS FROM WEB (use this information to answer):
+---
 ${searchContext}
-SEARCH_CONTEXT_END
+---
 
-Sekarang jawab pertanyaan pengguna berikut dengan menggunakan informasi di atas.
+YOUR TASK: Answer the user's question using ONLY the information from the search results above.
 
-PENTING - Format Jawaban:
+RULES:
+1. The search results ABOVE contain the EXACT information you need - USE IT
+2. NEVER say you don't have access to real-time data - you DO have it above
+3. NEVER say you can't browse the web - the web search has ALREADY been done for you
+4. Extract the specific data/numbers/facts from the search results and include them in your answer
+5. If the search results contain prices, statistics, or data - USE those exact numbers
 
-1. Jawab secara natural tanpa menyertakan link URL di dalam teks jawaban
-2. Jika Anda menggunakan informasi dari sumber tertentu, hanya sebutkan nama sumbernya dalam teks (contoh: "Menurut Hello Sehat...")
-3. Di akhir jawaban, TAMBAHKAN bagian "Sumber:" dengan format WAJIB: - [Nama Sumber](URL_lengkap)
-4. Setiap sumber di baris baru dengan format markdown link
-5. URL harus SAMA PERSIS dari search results di atas - JANGAN ubah URL
-6. CRITICAL: HANYA gunakan sumber yang TERSEDIA di SEARCH_CONTEXT di atas
-7. JANGAN buat-buat URL yang tidak ada di search results
-8. WAJIB tambahkan bagian Sumber jika Anda menggunakan informasi dari search results
+Format Your Answer:
+- Answer naturally without including URLs in the text
+- Mention source names naturally (e.g., "According to CoinMarketCap...")
+- At the END, add a "Sources:" section with full markdown links
+- Sources format: - [Source Name](EXACT_URL_from_above)
+- Each source on its own line
+- ONLY use sources that appear in the search results above
+- DO NOT make up URLs
 
-CONTOH FORMAT YANG BENAR:
-"Menurut Tradingview, harga Bitcoin adalah $74,736."
+EXAMPLE OF CORRECT ANSWER:
+"According to CoinMarketCap, the current price of Bitcoin is $67,234. The 24-hour trading volume is $28.5 billion.
 
-Sumber:
-- [Tradingview](https://www.tradingview.com)
-- [Binance](https://www.binance.com)
+Sources:
+- [CoinMarketCap](https://coinmarketcap.com/currencies/bitcoin)"
 
-JANGAN tulis seperti ini (SALAH):
-"Sumber: Tradingview, Binance" (TANPA link markdown!)
+WRONG ANSWER (DO NOT DO THIS):
+"I don't have access to real-time data. Please check CoinMarketCap yourself."
 
-FORMAT LIST - PENTING:
-1. Untuk numbered list, JANGAN gunakan enter/newline setelah angka. Format yang BENAR: "1. Teks jawaban"
-2. Format yang SALAH: "1.\nTeks jawaban" (ada enter setelah titik)
-3. Untuk bullet list, JANGAN gunakan enter setelah simbol. Format yang BENAR: "- Teks jawaban"
-4. Format yang SALAH: "-\nTeks jawaban" (ada enter setelah dash)
-5. Selalu tulis angka/simbol list followed langsung oleh spasi dan teks
+FORMAT LIST - IMPORTANT:
+1. For numbered lists, NO newline after the number. Use "1. Text" NOT "1.\nText"
+2. For bullet lists, NO newline after the dash. Use "- Text" NOT "-\nText"
 
-Pertanyaan: ${lastUserMessage}
+User Question: ${lastUserMessage}
 
-CRITICAL FINAL INSTRUCTIONS - READ CAREFULLY:
-
-1. You MUST provide a COMPLETE response - do NOT stop early or cut off mid-sentence
-2. Do NOT truncate any URLs - every URL must be complete with closing parenthesis
-3. Do NOT leave any markdown links incomplete - [text](url) must have both brackets and parentheses closed
-4. Continue generating until you have provided a full answer with proper conclusion
-5. ALWAYS end your response with the Sources section if you used any sources
-6. If you feel your response is getting long, SUMMARIZE but DO NOT cut off mid-URL or mid-sentence
-7. Your response is ONLY complete when it ends with either a proper period/exclamation/question mark OR the complete Sources section
-8. DO NOT stop generating until ALL information is provided AND all sources are listed
-
-Remember: A complete response is better than a truncated one. Generate the full answer.`;
+FINAL REMINDER:
+- The answer is IN THE SEARCH RESULTS ABOVE - find it and use it
+- Do NOT say you can't access real-time information
+- Do NOT say you can't browse the web
+- Extract the specific data and provide a complete, helpful answer
+- Include the Sources section at the end with all URLs from the search results`;
 }
 
 export async function POST(req: NextRequest) {
