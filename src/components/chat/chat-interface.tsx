@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
+import { flushSync } from "react-dom";
 import { Sidebar } from "./sidebar";
 import { MessageBubble } from "./message-bubble";
 import { SearchStatus } from "./search-status";
@@ -264,11 +265,13 @@ const ensureTextareaVisible = () => {
               if (content) {
                 chunkCount++;
                 assistantContent += content;
-                setMessages((prev) => {
-                  if (assistantMessageRef.current === null) return prev;
-                  const updated = [...prev];
-                  updated[assistantMessageRef.current] = { role: "assistant", content: assistantContent };
-                  return updated;
+                flushSync(() => {
+                  setMessages((prev) => {
+                    if (assistantMessageRef.current === null) return prev;
+                    const updated = [...prev];
+                    updated[assistantMessageRef.current] = { role: "assistant", content: assistantContent };
+                    return updated;
+                  });
                 });
                 scrollToBottom();
               }
@@ -493,11 +496,13 @@ const ensureTextareaVisible = () => {
               if (content) {
                 chunkCount++;
                 assistantContent += content;
-                setMessages((prev) => {
-                  if (assistantMessageRef.current === null) return prev;
-                  const updated = [...prev];
-                  updated[assistantMessageRef.current] = { role: "assistant", content: assistantContent };
-                  return updated;
+                flushSync(() => {
+                  setMessages((prev) => {
+                    if (assistantMessageRef.current === null) return prev;
+                    const updated = [...prev];
+                    updated[assistantMessageRef.current] = { role: "assistant", content: assistantContent };
+                    return updated;
+                  });
                 });
                 scrollToBottom();
               }
