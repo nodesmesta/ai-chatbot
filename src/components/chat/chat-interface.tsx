@@ -478,10 +478,12 @@ const ensureTextareaVisible = () => {
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
 
+        let doneReceived = false;
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);
             if (data === "[DONE]") {
+              doneReceived = true;
               console.log(`[CHAT] Received [DONE], total chunks: ${chunkCount}, content length: ${assistantContent.length} chars`);
               break;
             }
@@ -504,12 +506,34 @@ const ensureTextareaVisible = () => {
             }
           }
         }
+        if (doneReceived) break;
       }
 
-      if (buffer.trim()) {
-        console.log(`[CHAT] Remaining buffer: "${buffer}"`);
+// Process any remaining buffer content after stream ends
+if (buffer.trim()) {
+  console.log(`[CHAT] Processing remaining buffer: "${buffer}"`);
+  if (buffer.startsWith("data: ") && buffer !== "data: [DONE]") {
+    try {
+      const data = buffer.slice(6);
+      const parsed = JSON.parse(data);
+      const content = parsed.choices?.[0]?.delta?.content;
+      if (content) {
+        assistantContent += content;
+        setMessages((prev) => {
+          if (assistantMessageRef.current === null) return prev;
+          const updated = [...prev];
+          updated[assistantMessageRef.current] = { role: "assistant", content: assistantContent };
+          return updated;
+        });
+        console.log(`[CHAT] Processed remaining buffer content: ${content.length} chars`);
       }
-      console.log(`[CHAT] Stream ended, total chunks: ${chunkCount}, content length: ${assistantContent.length} chars`);
+    } catch (err) {
+      console.debug("Failed to parse remaining buffer:", err);
+    }
+  }
+}
+
+console.log(`[CHAT] Stream ended, total chunks: ${chunkCount}, content length: ${assistantContent.length} chars`);
     } catch (err) {
       console.error("Chat error:", err);
       setError(err instanceof Error ? err.message : "An error occurred");

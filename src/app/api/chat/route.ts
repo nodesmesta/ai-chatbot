@@ -435,20 +435,38 @@ async function createNvidiaResponse(messages: any[], apiKey: string, hasSearchCo
     throw new Error(`AI model error: ${nvidiaResponse.status} - ${errorText}`);
   }
 
-  // Transform the stream to add search status marker
-  const transformedStream = nvidiaResponse.body!.pipeThrough(
-    new TransformStream({
-      start(controller) {
-        // Send search status marker first
-        const marker = hasSearchContext ? '__SEARCH_USED__:true\n' : '__SEARCH_SKIPPED__:true\n';
+  // Create a custom stream that prepends search status marker and forwards all chunks
+  const marker = hasSearchContext ? '__SEARCH_USED__:true\n' : '__SEARCH_SKIPPED__:true\n';
+  let markerSent = false;
+
+  const transformedStream = new ReadableStream({
+    async start(controller) {
+      const reader = nvidiaResponse.body?.getReader();
+      if (!reader) {
+        controller.close();
+        return;
+      }
+
+      try {
+        // Send marker first
         controller.enqueue(new TextEncoder().encode(marker));
-      },
-      transform(chunk, controller) {
-        const text = new TextDecoder().decode(chunk);
-        controller.enqueue(chunk);
-      },
-    })
-  );
+        markerSent = true;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            break;
+          }
+          // Forward chunk directly without modification
+          controller.enqueue(value);
+        }
+      } catch (error) {
+        console.error("Stream transformation error:", error);
+        controller.error(error);
+      }
+    },
+  });
 
   return new Response(transformedStream, {
     headers: {
