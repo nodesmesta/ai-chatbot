@@ -108,26 +108,41 @@ export function extractSourcesFromContent(content: string): { mainContent: strin
       }
     }
   } else {
-    // Fallback: links at the end with no content after are footnotes
+    // Fallback: Check if links are at the end of content (typical sources section pattern)
+    // Look for links in the last 10 lines that match sources pattern
+    const lastLinesStart = Math.max(0, lines.length - 10);
     for (const link of allLinks) {
-      const lineIndex = link.lineIndex;
-      const line = lines[lineIndex].trim();
-
-      const isLinkOnlyLine = /^(\s*[-*]\s*|\s*\d+\.\s*)\[([^\]]+)\]\(https?:\/\/[^\)]+\)\)?$/i.test(line);
-
-      if (isLinkOnlyLine) {
-        let hasContentAfter = false;
-        for (let i = lineIndex + 1; i < lines.length; i++) {
-          if (lines[i].trim().length > 0) {
-            hasContentAfter = true;
-            break;
-          }
-        }
-
-        if (!hasContentAfter) {
-          footnoteLineIndices.add(lineIndex);
+      if (link.lineIndex >= lastLinesStart) {
+        const line = lines[link.lineIndex].trim();
+        // Check if this looks like a source entry (bullet point or numbered list with just a link)
+        const isSourcePattern = /^(\s*[-*]\s*|\s*\d+\.\s*)\[([^\]]+)\]\(https?:\/\/[^\)]+\)\s*$/.test(line);
+        if (isSourcePattern) {
+          footnoteLineIndices.add(link.lineIndex);
         }
       }
+    }
+
+    // Second fallback: if no sources section found and no obvious source entries,
+    // extract ALL unique links from the content as sources (for cases where LLM puts links inline)
+    if (footnoteLineIndices.size === 0 && allLinks.length > 0) {
+      // Extract unique domains from all links
+      const seenDomains = new Set<string>();
+      for (const link of allLinks) {
+        if (!seenDomains.has(link.domain)) {
+          seenDomains.add(link.domain);
+          sources.push({
+            title: link.title,
+            url: link.url,
+            domain: link.domain,
+          });
+        }
+      }
+      // Remove all markdown links from content since they were used as sources
+      let mainContent = content
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]*)/g, '$1')
+        .trim();
+      return { mainContent, sources };
     }
   }
 

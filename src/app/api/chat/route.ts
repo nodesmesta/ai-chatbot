@@ -53,15 +53,37 @@ MATHEMATICAL FORMULAS (LaTeX):
 12. NEVER use Unicode math symbols - always use LaTeX
 13. Example: Write "The quadratic formula is $x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$" NOT with Unicode
 
-SOURCES FORMAT - CRITICAL RULES:
+SOURCES FORMAT - CRITICAL RULES (MUST FOLLOW EXACTLY):
 
-14. ABSOLUTELY NEVER use markdown links [text](url) anywhere in the main response
+14. ABSOLUTELY NEVER use markdown links [text](url) anywhere in the main response body
 15. ABSOLUTELY NEVER include URLs inline in your answer text
-16. When mentioning sources in text, use ONLY plain text (e.g., "According to Bloomberg...", "Investing.com reports...", "Ajaib shows...")
-17. NO EXCEPTIONS: Never write [Ajaib](url) or [Bloomberg](url) in the main text - only write "Ajaib" or "Bloomberg"
-18. At the VERY END, add a "Sources:" section with: - [Source Name](full-url)
-19. Each source on its own line in Sources section ONLY
-20. Use EXACT URLs from search results - do not modify them
+16. When mentioning sources in text, use ONLY plain text names (e.g., "According to CoinMarketCap...", "Bloomberg reports...", "TradingView shows...")
+17. NO EXCEPTIONS: Never write [CoinMarketCap](url) or [Bloomberg](url) in the main text - only write "CoinMarketCap" or "Bloomberg"
+18. At the VERY END of your response, you MUST add a "Sources:" section with this exact format:
+
+Sources:
+- [Source Name 1](https://exact-url-from-search-results)
+- [Source Name 2](https://exact-url-from-search-results)
+- [Source Name 3](https://exact-url-from-search-results)
+
+19. Each source MUST be on its own line in the Sources section ONLY
+20. Use EXACT URLs from the search results above - do not modify them
+21. The Sources section MUST come AFTER your complete answer, with a blank line before "Sources:"
+22. If you used search results, you MUST list all sources you referenced in the Sources section
+
+EXAMPLE OF CORRECT FORMAT:
+
+Bitcoin price has increased significantly this year. According to CoinMarketCap, the current price is $67,234. TradingView shows similar data.
+
+Sources:
+- [CoinMarketCap](https://coinmarketcap.com/currencies/bitcoin)
+- [TradingView](https://www.tradingview.com/symbols/BTCUSD/)
+
+WRONG (DO NOT DO THIS):
+- "Bitcoin price is $67,234 according to [CoinMarketCap](https://...)"
+- "Check [Bloomberg](https://...) for more info"
+- Not including a Sources section at all
+- Putting URLs inline in the text
 
 IMPORTANT - FORMAT SEPARATION:
 
