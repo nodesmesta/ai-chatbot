@@ -243,54 +243,62 @@ async function preprocessAttachments(messages: any[]): Promise<any[]> {
 const processedMessages = await preprocessAttachments(messages);
 const nvidiaMessages = await Promise.all(processedMessages.map(processMessageContent));
 
-    const lastUserMessage = [...messages].reverse().find(m => m.role === "user")?.content || "";
+const lastUserMessage = [...messages].reverse().find(m => m.role === "user")?.content || "";
 
-    const { search: needSearch, query } = await shouldSearchWeb(messages, apiKey);
+const { search: needSearch, query } = await shouldSearchWeb(messages, apiKey);
 
-    let searchContext: string | null = null;
-    let searchResults: Array<{ url: string; title: string; content: string }> = [];
+let searchContext: string | null = null;
+let searchResults: Array<{ url: string; title: string; content: string }> = [];
 
-    if (needSearch && query) {
-      console.log("Performing web search for:", query);
+console.log("[CHAT] needSearch:", needSearch, "query:", query);
 
-      const results = await searchWeb(query, 5);
-      searchResults = results;
+if (needSearch && query) {
+  console.log("[CHAT] Performing web search for:", query);
 
-      if (results.length > 0) {
-        searchContext = formatSearchResults(results);
+  const results = await searchWeb(query, 5);
+  searchResults = results;
 
-        if (vectorizeService.isConfigured()) {
-          const embedding = await vectorizeService.generateEmbedding(query);
-          if (embedding.length > 0) {
-            await vectorizeService.upsertVector(query, embedding, {
-              query: query,
-              results: results.map(r => ({ url: r.url, title: r.title })),
-              timestamp: new Date().toISOString(),
-            });
-          }
-        }
-      } else {
-        console.log("No search results found");
+  console.log("[CHAT] Search returned", results.length, "results");
+
+  if (results.length > 0) {
+    searchContext = formatSearchResults(results);
+    console.log("[CHAT] Search context created, length:", searchContext.length);
+    console.log("[CHAT] Search context preview:", searchContext.substring(0, 500));
+
+    if (vectorizeService.isConfigured()) {
+      const embedding = await vectorizeService.generateEmbedding(query);
+      if (embedding.length > 0) {
+        await vectorizeService.upsertVector(query, embedding, {
+          query: query,
+          results: results.map(r => ({ url: r.url, title: r.title })),
+          timestamp: new Date().toISOString(),
+        });
       }
-    } else {
-      console.log("Skipping web search - not needed for this query");
     }
+  } else {
+    console.log("[CHAT] No search results found");
+  }
+} else {
+  console.log("[CHAT] Skipping web search - not needed for this query");
+}
 
-    let apiMessages: any[];
+let apiMessages: any[];
 
-    if (searchContext) {
-      const enhancedPrompt = createEnhancedPromptWithValidation(lastUserMessage, searchContext);
+if (searchContext) {
+  console.log("[CHAT] Using ENHANCED prompt with search context");
+  const enhancedPrompt = createEnhancedPromptWithValidation(lastUserMessage, searchContext);
 
-      apiMessages = [
-        { role: "system", content: enhancedPrompt },
-        ...nvidiaMessages.filter((m: any) => m.role === "system" || m.role === "user" || m.role === "assistant"),
-      ];
-    } else {
-      apiMessages = [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...nvidiaMessages,
-      ];
-    }
+  apiMessages = [
+    { role: "system", content: enhancedPrompt },
+    ...nvidiaMessages.filter((m: any) => m.role === "system" || m.role === "user" || m.role === "assistant"),
+  ];
+} else {
+  console.log("[CHAT] Using STANDARD prompt without search context");
+  apiMessages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...nvidiaMessages,
+  ];
+}
 
     const nvidiaResponse = await fetch(
       "https://integrate.api.nvidia.com/v1/chat/completions",
