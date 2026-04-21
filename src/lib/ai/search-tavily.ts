@@ -136,10 +136,17 @@ export function formatSearchResults(results: SearchResult[]): string {
 
   const formatted = results
     .map((result, index) => {
+      // Remove markdown bold/italic formatting to prevent LaTeX rendering issues
+      const cleanContent = result.content
+        .replace(/\*\*(.+?)\*\*/g, '$1') // Remove **bold**
+        .replace(/\*(.+?)\*/g, '$1')     // Remove *italic*
+        .replace(/__ (.+?) __/g, '$1')   // Remove __bold__
+        .replace(/_ (.+?) _/g, '$1');    // Remove _italic_
+
       return `[RESULT ${index + 1}]
 URL: ${result.url}
 Title: ${result.title}
-Content: ${result.content}
+Content: ${cleanContent}
 Domain: ${result.domain}
 ---`;
     })
