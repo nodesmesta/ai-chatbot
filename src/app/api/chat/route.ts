@@ -253,27 +253,9 @@ let searchResults: Array<{ url: string; title: string; content: string }> = [];
 console.log("[CHAT] needSearch:", needSearch, "query:", query);
 
 if (needSearch && query) {
-  // Convert Indonesian query to English for better search results
-  const searchQuery = query.toLowerCase();
-  let optimizedQuery = query;
+  console.log("[CHAT] Performing web search for:", query);
 
-  // Map common Indonesian queries to English
-  if (searchQuery.includes("berapa harga") || searchQuery.includes("harga")) {
-    if (searchQuery.includes("btc") || searchQuery.includes("bitcoin")) {
-      optimizedQuery = "Bitcoin BTC price USD today";
-    } else if (searchQuery.includes("eth") || searchQuery.includes("ethereum")) {
-      optimizedQuery = "Ethereum ETH price USD today";
-    }
-  }
-
-  // For crypto prices, always use English query
-  if (searchQuery.includes("kripto") || searchQuery.includes("cryptocurrency") || searchQuery.includes("mata uang digital")) {
-    optimizedQuery = "cryptocurrency prices today USD";
-  }
-
-  console.log("[CHAT] Performing web search for:", optimizedQuery);
-
-  const results = await searchWeb(optimizedQuery, 5);
+  const results = await searchWeb(query, 5);
   searchResults = results;
 
   console.log("[CHAT] Search returned", results.length, "results");
