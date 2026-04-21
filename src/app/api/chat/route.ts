@@ -7,36 +7,57 @@ import { vectorizeService } from "@/lib/ai/vectorize";
 // For multimodal (image) support, use llama-3.2-vision model
 const MODEL = process.env.NVIDIA_NIM_MODEL || "meta/llama-3.2-90b-vision-instruct";
 
-// System prompt dengan instruksi yang lebih strict untuk mencegah hallucination
+// System prompt dengan instruksi format yang jelas
 const SYSTEM_PROMPT =
   process.env.NVIDIA_NIM_SYSTEM_PROMPT ||
   `You are a helpful AI assistant.
 
 CRITICAL: Always provide COMPLETE and FULL responses. Never cut off mid-sentence or mid-thought.
 
-IMPORTANT FORMATTING RULES:
+CONTENT FORMAT RULES (GitHub Flavored Markdown):
 
-1. NEVER include markdown links [text](url) in your main response text
-2. NEVER include URLs inline in your answer
-3. If you reference information from a source, only mention the source name naturally in text
-4. At the end of your response, if you used external sources, add a "Sources:" section with the full list of references
-5. Sources must be formatted as: - [Source Name](full-url)
-6. Each source must be on its own line in the Sources section only
-7. ALWAYS include sources when you use information from web search results
-8. Use the EXACT URLs from the search results provided - do not modify them
-9. If you used search results, you MUST include a Sources section with all referenced sources
+1. Use standard GFM syntax for ALL formatting
+2. For code blocks: \`\`\`language\ncode\n\`\`\`
+3. For inline code: \`code\`
+4. For bold: **text**, italic: *text*, strikethrough: ~~text~~
+5. For lists:
+   - Bullet: - item (space after dash)
+   - Numbered: 1. item (space after dot)
+   - Nested: indent 2 spaces
+6. For tables: Use standard markdown table syntax with | and -
+7. For blockquotes: > text
+8. For horizontal rules: ---
 
-LIST FORMATTING RULES:
-10. For numbered lists, NEVER put a newline after the number. Use "1. Text" NOT "1.\nText"
-11. For bullet lists, NEVER put a newline after the dash. Use "- Text" NOT "-\nText"
-12. Always write the list marker followed immediately by a space and the text on the same line
+MATHEMATICAL FORMULAS (LaTeX):
 
-RESPONSE COMPLETENESS RULES:
-13. ALWAYS finish your thought completely - never stop mid-sentence
-14. Always end with proper punctuation (. ! ?) or a complete conclusion
-15. If providing a list, include ALL items - never cut off mid-list
-16. Take time to provide a thorough, comprehensive answer
-17. Before ending your response, ask yourself: "Is this complete? Did I finish all thoughts?"`;
+9. ALWAYS use LaTeX for ALL mathematical expressions
+10. For inline math: $formula$ (e.g., $E = mc^2$)
+11. For display/block math: $$formula$$ (e.g., $$\\sum_{i=1}^{n} x_i$$)
+12. NEVER use Unicode math symbols - always use LaTeX
+13. Example: Write "The quadratic formula is $x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$" NOT with Unicode
+
+SOURCES FORMAT - CRITICAL RULES:
+
+14. ABSOLUTELY NEVER use markdown links [text](url) anywhere in the main response
+15. ABSOLUTELY NEVER include URLs inline in your answer text
+16. When mentioning sources in text, use ONLY plain text (e.g., "According to Bloomberg...", "Investing.com reports...", "Ajaib shows...")
+17. NO EXCEPTIONS: Never write [Ajaib](url) or [Bloomberg](url) in the main text - only write "Ajaib" or "Bloomberg"
+18. At the VERY END, add a "Sources:" section with: - [Source Name](full-url)
+19. Each source on its own line in Sources section ONLY
+20. Use EXACT URLs from search results - do not modify them
+
+IMPORTANT - FORMAT SEPARATION:
+
+20. Markdown syntax is for STRUCTURE (headings, lists, code, tables)
+21. LaTeX syntax ($...$ and $$...$$) is for MATH ONLY
+22. NEVER mix: don't put markdown inside $...$ and don't use $...$ for non-math
+23. If showing currency: use "USD 100" or "$100" (text), NOT $100$ (LaTeX)
+
+RESPONSE COMPLETENESS:
+24. ALWAYS finish thoughts completely - never stop mid-sentence
+25. Always end with proper punctuation or complete conclusion
+26. If providing a list, include ALL items - never cut off mid-list
+27. Before ending, ask: "Is this complete? Did I finish all thoughts?"`;
 
 // Keywords yang MENYEBUTKAN tidak perlu search (greetings, casual chat)
 const NO_SEARCH_KEYWORDS = [
@@ -66,7 +87,7 @@ async function shouldSearchWeb(
 }
 
 function createEnhancedPromptWithValidation(lastUserMessage: string, searchContext: string): string {
-  return `CRITICAL: You HAVE been provided with EXACT search results from the web. You MUST use this information to answer - do NOT say you don't have access to real-time data.
+  return `CRITICAL: You HAVE been provided with EXACT search results from the web. You MUST use this information to answer.
 
 SEARCH RESULTS FROM WEB (use this information to answer):
 ---
@@ -75,43 +96,38 @@ ${searchContext}
 
 YOUR TASK: Answer the user's question using ONLY the information from the search results above.
 
-RULES:
-1. The search results ABOVE contain the EXACT information you need - USE IT
-2. NEVER say you don't have access to real-time data - you DO have it above
-3. NEVER say you can't browse the web - the web search has ALREADY been done for you
-4. Extract the specific data/numbers/facts from the search results and include them in your answer
-5. If the search results contain prices, statistics, or data - USE those exact numbers
+FORMAT RULES (GitHub Flavored Markdown + LaTeX):
 
-Format Your Answer:
-- Answer naturally without including URLs in the text
-- Mention source names naturally (e.g., "According to CoinMarketCap...")
-- At the END, add a "Sources:" section with full markdown links
-- Sources format: - [Source Name](EXACT_URL_from_above)
-- Each source on its own line
-- ONLY use sources that appear in the search results above
-- DO NOT make up URLs
+STRUCTURE (Markdown):
+- Headings: # H1, ## H2, ### H3
+- Lists: - item, 1. item (with space after marker)
+- Bold: **text**, Italic: *text*
+- Code: inline \`code\`, block \`\`\`language\ncode\n\`\`\`
+- Tables: | Col 1 | Col 2 |\n|-------|-------|\n| A | B |
 
-EXAMPLE OF CORRECT ANSWER:
-"According to CoinMarketCap, the current price of Bitcoin is $67,234. The 24-hour trading volume is $28.5 billion.
+MATHEMATICS (LaTeX):
+- Inline math: $formula$ (e.g., $E = mc^2$)
+- Block math: $$formula$$ (e.g., $$\\sum_{i=1}^{n} x_i = \\bar{x}$$)
+- ALWAYS use LaTeX for math, NEVER Unicode symbols
+- Currency like "USD 100" or "$100" - do NOT use $100$ (that's LaTeX)
+
+SOURCES:
+- Mention sources naturally: "According to CoinMarketCap..."
+- At END, add: Sources:\n- [Source Name](EXACT_URL)
+- NEVER put URLs inline in text
+
+EXAMPLE CORRECT:
+"According to CoinMarketCap, Bitcoin price is $67,234.
 
 Sources:
 - [CoinMarketCap](https://coinmarketcap.com/currencies/bitcoin)"
 
-WRONG ANSWER (DO NOT DO THIS):
-"I don't have access to real-time data. Please check CoinMarketCap yourself."
+WRONG (DO NOT DO):
+- "I don't have access to real-time data"
+- Unicode math: "∑" instead of $\\sum$
+- "Check [CoinMarketCap](url) for prices" (inline link)
 
-FORMAT LIST - IMPORTANT:
-1. For numbered lists, NO newline after the number. Use "1. Text" NOT "1.\nText"
-2. For bullet lists, NO newline after the dash. Use "- Text" NOT "-\nText"
-
-User Question: ${lastUserMessage}
-
-FINAL REMINDER:
-- The answer is IN THE SEARCH RESULTS ABOVE - find it and use it
-- Do NOT say you can't access real-time information
-- Do NOT say you can't browse the web
-- Extract the specific data and provide a complete, helpful answer
-- Include the Sources section at the end with all URLs from the search results`;
+User Question: ${lastUserMessage}`;
 }
 
 export async function POST(req: NextRequest) {

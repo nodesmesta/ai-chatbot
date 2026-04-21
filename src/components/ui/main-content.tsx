@@ -76,8 +76,11 @@ export function MainContent({ content, sources = [], onRetry }: MainContentProps
   return (
     <div className="max-w-none text-[#e2e8f0]">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
+        // remark-math must come BEFORE remark-gfm to prevent GFM from interfering with LaTeX delimiters
+        remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[rehypeKatex]}
+        // Prevent LaTeX delimiter characters from being escaped
+        remarkRehypeOptions={{ allowDangerousHtml: false }}
         components={{
           p: ({ children }: any) => <p className="my-3 text-base leading-7 first:mt-0 last:mb-3">{children}</p>,
           h1: ({ children }: any) => <h1 className="text-xl font-semibold text-white mt-6 mb-3">{children}</h1>,
@@ -90,16 +93,29 @@ export function MainContent({ content, sources = [], onRetry }: MainContentProps
           blockquote: ({ children }: any) => (
             <blockquote className="border-l-2 border-[#334155] pl-4 my-3 text-[#94a3b8] italic">{children}</blockquote>
           ),
-          a: ({ href, children }: any) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:text-[#cbd5e1] transition-colors underline"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children }: any) => {
+            // Only render as link if href is valid and children is text
+            // If it's a bare URL or looks like an inline citation, just show text
+            const isBareUrl = typeof children === 'string' &&
+              (children === href || href?.includes(children));
+            const looksLikeCitation = typeof children === 'string' &&
+              (children.length < 3 || /^\[?\d+\]?$/.test(children));
+
+            if (isBareUrl || looksLikeCitation) {
+              return <span className="text-[#e2e8f0]">{children}</span>;
+            }
+
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-[#cbd5e1] transition-colors underline"
+              >
+                {children}
+              </a>
+            );
+          },
           table: ({ children }: any) => (
             <div className="my-4 overflow-x-auto">
               <table className="min-w-full border-collapse border border-[#1e293b]">{children}</table>

@@ -291,11 +291,7 @@ const ensureTextareaVisible = () => {
       setSearchStatus(prev => (prev && prev.searching ? { searching: false, skipped: prev.skipped } : prev));
       setIsLoading(false);
       if (assistantContent) {
-        let processedContent = assistantContent;
-        processedContent = processedContent.replace(/(\d+)\.\s*/g, "$1 ");
-        processedContent = processedContent.replace(/([-*])\s*/g, "$1 ");
-        processedContent = processedContent.replace(/(\*\*[^*]+\*\*)\s*\n\s*(\[)/g, "$1 $2");
-
+        const processedContent = assistantContent;
         const { sources } = extractSourcesFromContent(processedContent);
         if (sources.length > 0) {
           setMessages(prev => {
@@ -522,11 +518,7 @@ const ensureTextareaVisible = () => {
       setSearchStatus((prev) => (prev && prev.searching ? { searching: false, skipped: prev.skipped } : prev));
       setIsLoading(false);
       if (assistantContent) {
-        let processedContent = assistantContent;
-        processedContent = processedContent.replace(/(\d+)\.\s*/g, "$1 ");
-        processedContent = processedContent.replace(/([-*])\s*/g, "$1 ");
-        processedContent = processedContent.replace(/(\*\*[^*]+\*\*)\s*\n\s*(\[)/g, "$1 $2");
-
+        const processedContent = assistantContent;
         const { sources } = extractSourcesFromContent(processedContent);
         if (sources.length > 0) {
           setMessages((prev) => {

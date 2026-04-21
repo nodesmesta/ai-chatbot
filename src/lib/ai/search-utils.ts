@@ -131,22 +131,9 @@ export function extractSourcesFromContent(content: string): { mainContent: strin
     }
   }
 
-  // Extract footnote links to sources (deduplicated)
+  // Extract footnote links to sources (deduplicated) - ONLY from footnote section
   for (const link of allLinks) {
     if (footnoteLineIndices.has(link.lineIndex)) {
-      if (!sources.some((s) => s.url === link.url)) {
-        sources.push({
-          title: link.title,
-          url: link.url,
-          domain: link.domain,
-        });
-      }
-    }
-  }
-
-  // Also extract inline links (links not in footnote section)
-  for (const link of allLinks) {
-    if (!footnoteLineIndices.has(link.lineIndex)) {
       if (!sources.some((s) => s.url === link.url)) {
         sources.push({
           title: link.title,
@@ -164,13 +151,22 @@ export function extractSourcesFromContent(content: string): { mainContent: strin
     return true;
   });
 
-  let mainContent = contentLines.join('\n')
-    .replace(/(\d+)\.\s*\n+/g, '$1. ')
-    .replace(/([-*])\s*\n+/g, '$1 ')
-    .replace(/(\d+\.)\s*\n+\s*/g, '$1 ')
-    .replace(/([-*])\s*\n+\s*/g, '$1 ')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
-    .trim();
+  // Remove markdown links - handle both complete and potentially truncated links
+  // Complete: [text](url) -> text
+  // Truncated: [text](url (no closing paren) -> text (and capture partial URL to remove)
+  let mainContent = contentLines.join('\n');
+
+  // First pass: remove complete markdown links [text](url)
+  mainContent = mainContent.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$1');
+
+  // Second pass: remove incomplete/truncated links [text](url (no closing paren)
+  // This handles cases where URL was cut off during streaming
+  mainContent = mainContent.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]*)/g, '$1');
+
+  // Third pass: clean up any remaining orphaned brackets from incomplete markdown
+  mainContent = mainContent.replace(/\[([^\]]+)\]\s*\(\s*$/g, '$1');
+
+  mainContent = mainContent.trim();
 
   return { mainContent, sources };
 }

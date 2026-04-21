@@ -2,11 +2,14 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { CopyButton } from "../common/copy-button";
 import { SourceList } from "./source-list";
 import type { Source } from "./source-card";
+import 'katex/dist/katex.css';
 
 interface MarkdownContentProps {
   content: string;
@@ -17,7 +20,8 @@ export function MarkdownContent({ content, sources = [] }: MarkdownContentProps)
   return (
     <div className="max-w-none text-[#e2e8f0]">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkMath, remarkGfm]}
+        rehypePlugins={[rehypeKatex]}
         components={{
           code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || "");
@@ -80,7 +84,14 @@ export function MarkdownContent({ content, sources = [] }: MarkdownContentProps)
             </blockquote>
           ),
           a: ({ href, children }: any) => (
-            <span className="text-[#e8eef5]">{children}</span>
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white hover:text-[#cbd5e1] transition-colors underline"
+            >
+              {children}
+            </a>
           ),
           table: ({ children }: any) => (
             <div className="my-4 overflow-x-auto">
