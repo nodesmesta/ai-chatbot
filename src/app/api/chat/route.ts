@@ -2,15 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchWeb, formatSearchResults } from "@/lib/ai/search-tavily";
 import { vectorizeService } from "@/lib/ai/vectorize";
 
-
 // NVIDIA NIM model configuration
-// For multimodal (image) support, use llama-3.2-vision model
 const MODEL = process.env.NVIDIA_NIM_MODEL || "meta/llama-3.2-90b-vision-instruct";
+
+// Tool definition for web search - LLM will decide when to use this
+const SEARCH_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "search_web",
+    description: "Search the web for current and up-to-date information. Use this tool when you need to find current events, latest news, real-time data, stock prices, cryptocurrency prices, or information that may have changed since your training.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        query: {
+          type: "string" as const,
+          description: "The search query to find relevant information from the web"
+        }
+      },
+      required: ["query"]
+    }
+  }
+};
 
 // System prompt dengan instruksi format yang jelas
 const SYSTEM_PROMPT =
-  process.env.NVIDIA_NIM_SYSTEM_PROMPT ||
-  `You are a helpful AI assistant.
+process.env.NVIDIA_NIM_SYSTEM_PROMPT ||
+`You are a helpful AI assistant.
 
 CRITICAL: Always provide COMPLETE and FULL responses. Never cut off mid-sentence or mid-thought.
 
@@ -21,9 +38,9 @@ CONTENT FORMAT RULES (GitHub Flavored Markdown):
 3. For inline code: \`code\`
 4. For bold: **text**, italic: *text*, strikethrough: ~~text~~
 5. For lists:
-   - Bullet: - item (space after dash)
-   - Numbered: 1. item (space after dot)
-   - Nested: indent 2 spaces
+- Bullet: - item (space after dash)
+- Numbered: 1. item (space after dot)
+- Nested: indent 2 spaces
 6. For tables: Use standard markdown table syntax with | and -
 7. For blockquotes: > text
 8. For horizontal rules: ---
@@ -59,31 +76,18 @@ RESPONSE COMPLETENESS:
 26. If providing a list, include ALL items - never cut off mid-list
 27. Before ending, ask: "Is this complete? Did I finish all thoughts?"`;
 
-// Keywords yang MENYEBUTKAN tidak perlu search (greetings, casual chat)
-const NO_SEARCH_KEYWORDS = [
+// Keywords untuk greetings sederhana
+const GREETING_KEYWORDS = [
   "halo", "hi", "hello", "pagi", "siang", "sore", "malam",
   "apa kabar", "how are you", "terima kasih", "thanks",
   "nama kamu", "who are you", "apa nama kamu", "what is your name",
 ];
 
-async function shouldSearchWeb(
-  messages: any[],
-  apiKey: string
-): Promise<{ search: boolean; query: string }> {
-  const lastMessage = [...messages].reverse().find(m => m.role === "user")?.content || "";
-  const lowerMessage = lastMessage.toLowerCase();
-
-  // ONLY skip search for clear greetings/casual chat
-  const isGreeting = NO_SEARCH_KEYWORDS.some(keyword =>
+function isSimpleGreeting(message: string): boolean {
+  const lowerMessage = message.toLowerCase().trim();
+  return GREETING_KEYWORDS.some(keyword =>
     lowerMessage === keyword.toLowerCase() || lowerMessage.startsWith(keyword.toLowerCase() + " ")
   );
-
-  // For ALL other queries, ALWAYS search to ensure up-to-date information
-  // This ensures the AI can answer questions about current events, news, etc.
-  const shouldSearch = !isGreeting;
-
-  console.log(shouldSearch ? "Search enabled for:" : "Search skipped for:", lastMessage);
-  return { search: shouldSearch, query: lastMessage };
 }
 
 function createEnhancedPromptWithValidation(lastUserMessage: string, searchContext: string): string {
@@ -134,7 +138,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as { messages: any[] };
     const messages = body.messages;
-  console.log("Received messages:", JSON.stringify(body.messages, null, 2));
+    console.log("Received messages:", JSON.stringify(body.messages, null, 2));
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -152,276 +156,227 @@ export async function POST(req: NextRequest) {
       );
     }
 
-// Process attachments and build messages for NVIDIA NIM
-const processMessageContent = async (msg: any): Promise<any> => {
-  if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
-    // Build multimodal content array for vision model
-    const content: any[] = [];
+    // Process attachments and build messages for NVIDIA NIM
+    const processMessageContent = async (msg: any): Promise<any> => {
+      if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
+        const content: any[] = [];
 
-    // Add image attachments first
-    for (const attachment of msg.attachments) {
-      const fileType = attachment.type;
+        for (const attachment of msg.attachments) {
+          const fileType = attachment.type;
 
-      if (fileType.startsWith("image/")) {
-        // Send image as base64 data URL (Llama 3.2 vision format)
-        content.push({
-          type: "image_url",
-          image_url: { url: attachment.preview }
-        });
-      } else if (attachment.content) {
-        // For text files with extracted content, send the actual content
-        const fileTypeLabel = getFileTypeLabel(fileType, attachment.name);
-        content.push({
-          type: "text",
-          text: `[File: ${attachment.name} (${fileTypeLabel}, ${formatFileSize(attachment.size)})]\n\n${attachment.content}\n\n[End of file content]`
-        });
-      } else {
-        console.log("[Chat API] Attachment without content:", attachment.name);
-        // Fallback: add description for files without extracted content
-        const fileTypeLabel = getFileTypeLabel(fileType, attachment.name);
-        content.push({
-          type: "text",
-          text: `[Attachment: ${attachment.name} (${fileTypeLabel}, ${formatFileSize(attachment.size)}) - User wants analysis of this file]`
-        });
-      }
-    }
-
-    // Add text content (question/prompt) after attachments
-    if (msg.content && msg.content.trim()) {
-      content.push({ type: "text", text: msg.content });
-    } else if (msg.attachments.length > 0) {
-      // If no text content, add a default prompt for analyzing attachments
-      content.push({
-        type: "text",
-        text: "Please analyze the attached file(s)."
-      });
-    }
-
-    return { role: msg.role, content };
-  }
-
-  // For non-attachment messages, use simple string content
-  return { role: msg.role, content: msg.content };
-};
-
-// Helper function to get file type label
-function getFileTypeLabel(fileType: string, fileName: string): string {
-  if (fileType === "application/pdf" || fileName.endsWith(".pdf")) return "PDF";
-  if (fileType === "text/csv" || fileName.endsWith(".csv")) return "CSV";
-  if (fileType === "application/json" || fileName.endsWith(".json")) return "JSON";
-  if (fileType === "text/plain") return "Text";
-  if (fileType.startsWith("image/")) return "Image";
-  return "File";
-}
-
-// Helper function to format file size
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-// Pre-process attachments to handle OCR-based PDFs
-async function preprocessAttachments(messages: any[]): Promise<any[]> {
-  const processedMessages = [];
-
-  for (const msg of messages) {
-    if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
-      const processedAttachments = [];
-
-      for (const attachment of msg.attachments) {
-        const fileType = attachment.type;
-
-        // If this is a PDF with OCR-required marker, fetch OCR images
-        if (fileType === "application/pdf" && attachment.content && attachment.content.includes("[OCR_REQUIRED:")) {
-          // Check if ocrImages already exists (shouldn't happen, but handle it)
-          if (!attachment.ocrImages) {
-            // This shouldn't happen in normal flow, but handle gracefully
-            console.log("PDF attachment missing OCR images, using text fallback");
+          if (fileType.startsWith("image/")) {
+            content.push({
+              type: "image_url",
+              image_url: { url: attachment.preview }
+            });
+          } else if (attachment.content) {
+            const fileTypeLabel = getFileTypeLabel(fileType, attachment.name);
+            content.push({
+              type: "text",
+              text: `[File: ${attachment.name} (${fileTypeLabel}, ${formatFileSize(attachment.size)})]\n\n${attachment.content}\n\n[End of file content]`
+            });
+          } else {
+            console.log("[Chat API] Attachment without content:", attachment.name);
+            const fileTypeLabel = getFileTypeLabel(fileType, attachment.name);
+            content.push({
+              type: "text",
+              text: `[Attachment: ${attachment.name} (${fileTypeLabel}, ${formatFileSize(attachment.size)}) - User wants analysis of this file]`
+            });
           }
         }
 
-        processedAttachments.push(attachment);
+        if (msg.content && msg.content.trim()) {
+          content.push({ type: "text", text: msg.content });
+        } else if (msg.attachments.length > 0) {
+          content.push({
+            type: "text",
+            text: "Please analyze the attached file(s)."
+          });
+        }
+
+        return { role: msg.role, content };
       }
 
-      processedMessages.push({
-        ...msg,
-        attachments: processedAttachments,
-      });
-    } else {
-      processedMessages.push(msg);
-    }
-  }
+      return { role: msg.role, content: msg.content };
+    };
 
-  return processedMessages;
-}
-
-const processedMessages = await preprocessAttachments(messages);
-const nvidiaMessages = await Promise.all(processedMessages.map(processMessageContent));
-
-const lastUserMessage = [...messages].reverse().find(m => m.role === "user")?.content || "";
-
-const { search: needSearch, query } = await shouldSearchWeb(messages, apiKey);
-
-let searchContext: string | null = null;
-let searchResults: Array<{ url: string; title: string; content: string }> = [];
-
-console.log("[CHAT] needSearch:", needSearch, "query:", query);
-
-if (needSearch && query) {
-  console.log("[CHAT] Performing web search for:", query);
-
-  const results = await searchWeb(query, 5);
-  searchResults = results;
-
-  console.log("[CHAT] Search returned", results.length, "results");
-
-  if (results.length > 0) {
-    searchContext = formatSearchResults(results);
-    console.log("[CHAT] Search context created, length:", searchContext.length);
-    console.log("[CHAT] Search context preview:", searchContext.substring(0, 500));
-
-    if (vectorizeService.isConfigured()) {
-      const embedding = await vectorizeService.generateEmbedding(query);
-      if (embedding.length > 0) {
-        await vectorizeService.upsertVector(query, embedding, {
-          query: query,
-          results: results.map(r => ({ url: r.url, title: r.title })),
-          timestamp: new Date().toISOString(),
-        });
-      }
-    }
-  } else {
-    console.log("[CHAT] No search results found");
-  }
-} else {
-  console.log("[CHAT] Skipping web search - not needed for this query");
-}
-
-let apiMessages: any[];
-
-if (searchContext) {
-  console.log("[CHAT] Using ENHANCED prompt with search context");
-  const enhancedPrompt = createEnhancedPromptWithValidation(lastUserMessage, searchContext);
-
-  apiMessages = [
-    { role: "system", content: enhancedPrompt },
-    ...nvidiaMessages.filter((m: any) => m.role === "system" || m.role === "user" || m.role === "assistant"),
-  ];
-} else {
-  console.log("[CHAT] Using STANDARD prompt without search context");
-  apiMessages = [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...nvidiaMessages,
-  ];
-}
-
-    const nvidiaResponse = await fetch(
-      "https://integrate.api.nvidia.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: apiMessages,
-          stream: true,
-          max_tokens: 4096,
-          temperature: 0.7,
-          top_p: 0.85,
-        }),
-      }
-    );
-
-    if (!nvidiaResponse.ok) {
-      const errorText = await nvidiaResponse.text();
-      console.error("NVIDIA NIM API error:", nvidiaResponse.status, errorText);
-      return NextResponse.json(
-        { error: `AI model error: ${nvidiaResponse.status} - ${errorText}` },
-        { status: 500 }
-      );
+    function getFileTypeLabel(fileType: string, fileName: string): string {
+      if (fileType === "application/pdf" || fileName.endsWith(".pdf")) return "PDF";
+      if (fileType === "text/csv" || fileName.endsWith(".csv")) return "CSV";
+      if (fileType === "application/json" || fileName.endsWith(".json")) return "JSON";
+      if (fileType === "text/plain") return "Text";
+      if (fileType.startsWith("image/")) return "Image";
+      return "File";
     }
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const reader = nvidiaResponse.body?.getReader();
-          if (!reader) {
-            controller.close();
-            return;
-          }
+    function formatFileSize(bytes: number): string {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
 
-          if (searchContext) {
-            controller.enqueue(new TextEncoder().encode(`__SEARCH_USED__:true\n`));
-          } else {
-            controller.enqueue(new TextEncoder().encode(`__SEARCH_SKIPPED__:true\n`));
-          }
+    async function preprocessAttachments(messages: any[]): Promise<any[]> {
+      const processedMessages = [];
 
-          let buffer = "";
-          let totalContentLength = 0;
+      for (const msg of messages) {
+        if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
+          const processedAttachments = [];
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+          for (const attachment of msg.attachments) {
+            const fileType = attachment.type;
 
-            const chunk = new TextDecoder().decode(value);
-            buffer += chunk;
-
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              const trimmedLine = line.trim();
-              if (!trimmedLine) continue;
-
-              if (trimmedLine.startsWith('data: ') && trimmedLine !== 'data: [DONE]') {
-                const data = trimmedLine.slice(6);
-                try {
-                  const parsed = JSON.parse(data);
-                  const content = parsed.choices?.[0]?.delta?.content || "";
-                  if (content) {
-                    totalContentLength += content.length;
-                  }
-                } catch {
-                  // Not JSON, forward as is
-                }
-                controller.enqueue(new TextEncoder().encode(`${trimmedLine}\n`));
-              } else if (trimmedLine === 'data: [DONE]') {
-                console.log(`[STREAM] Received [DONE], total content chars: ${totalContentLength}`);
-                if (buffer.trim()) {
-                  controller.enqueue(new TextEncoder().encode(buffer));
-                  totalContentLength += buffer.length;
-                }
-                console.log(`[STREAM] Final total content chars: ${totalContentLength}`);
-                controller.close();
-                return;
+            if (fileType === "application/pdf" && attachment.content && attachment.content.includes("[OCR_REQUIRED:")) {
+              if (!attachment.ocrImages) {
+                console.log("PDF attachment missing OCR images, using text fallback");
               }
+            }
+
+            processedAttachments.push(attachment);
+          }
+
+          processedMessages.push({
+            ...msg,
+            attachments: processedAttachments,
+          });
+        } else {
+          processedMessages.push(msg);
+        }
+      }
+
+      return processedMessages;
+    }
+
+    const processedMessages = await preprocessAttachments(messages);
+    const nvidiaMessages = await Promise.all(processedMessages.map(processMessageContent));
+
+    const lastUserMessage = [...messages].reverse().find(m => m.role === "user")?.content || "";
+
+    // Track search status for frontend
+    const searchStatus = { used: false, skipped: false, searching: false };
+
+    // Check if this is a simple greeting - skip tool calling entirely
+    if (isSimpleGreeting(lastUserMessage)) {
+      searchStatus.skipped = true;
+      console.log("[CHAT] Greeting detected, skipping tool calling:", lastUserMessage);
+    } else {
+      searchStatus.searching = true;
+      console.log("[CHAT] Tool calling enabled for:", lastUserMessage);
+    }
+
+    let apiMessages: any[];
+
+    if (searchStatus.searching) {
+      // First API call: Let LLM decide if it needs to search using tool calling
+      apiMessages = [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...nvidiaMessages.filter((m: any) => m.role === "system" || m.role === "user" || m.role === "assistant"),
+      ];
+
+      const firstResponse = await fetch(
+        "https://integrate.api.nvidia.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: MODEL,
+            messages: apiMessages,
+            tools: [SEARCH_TOOL],
+            tool_choice: "auto",
+            max_tokens: 4096,
+            temperature: 0.7,
+            top_p: 0.85,
+          }),
+        }
+      );
+
+      if (!firstResponse.ok) {
+        const errorText = await firstResponse.text();
+        console.error("NVIDIA NIM API error (first call):", firstResponse.status, errorText);
+        return NextResponse.json(
+          { error: `AI model error: ${firstResponse.status} - ${errorText}` },
+          { status: 500 }
+        );
+      }
+
+      const firstData = await firstResponse.json();
+      const toolCall = firstData.choices?.[0]?.message?.tool_calls?.[0];
+      const responseMessage = firstData.choices?.[0]?.message;
+
+      // Check if LLM decided to use the search tool
+      if (toolCall && toolCall.function?.name === "search_web") {
+        console.log("[CHAT] LLM decided to use search tool");
+        searchStatus.used = true;
+        searchStatus.skipped = false;
+
+        // Parse the search query from tool arguments
+        let searchQuery = "";
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          searchQuery = args.query;
+          console.log("[CHAT] Search query from LLM:", searchQuery);
+        } catch (e) {
+          console.error("Failed to parse tool arguments:", e);
+          searchQuery = lastUserMessage;
+        }
+
+        // Perform the search
+        const results = await searchWeb(searchQuery, 5);
+        console.log("[CHAT] Search returned", results.length, "results");
+
+        if (results.length > 0) {
+          const searchContext = formatSearchResults(results);
+
+          if (vectorizeService.isConfigured()) {
+            const embedding = await vectorizeService.generateEmbedding(searchQuery);
+            if (embedding.length > 0) {
+              await vectorizeService.upsertVector(searchQuery, embedding, {
+                query: searchQuery,
+                results: results.map(r => ({ url: r.url, title: r.title })),
+                timestamp: new Date().toISOString(),
+              });
             }
           }
 
-          if (buffer.trim()) {
-            controller.enqueue(new TextEncoder().encode(buffer));
-            totalContentLength += buffer.length;
-          }
+          // Add search results as tool response
+          const toolResponse = {
+            role: "tool" as const,
+            tool_call_id: toolCall.id,
+            name: "search_web",
+            content: searchContext,
+          };
 
-          console.log(`[STREAM] Stream ended naturally, total content chars: ${totalContentLength}`);
-          controller.close();
-        } catch (error) {
-          console.error("Stream error:", error);
-          controller.error(error);
+          // Second API call: LLM answers with search context
+          const secondApiMessages = [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...nvidiaMessages.filter((m: any) => m.role === "system" || m.role === "user" || m.role === "assistant"),
+            responseMessage,
+            toolResponse,
+          ];
+
+          return createNvidiaResponse(secondApiMessages, apiKey, true);
+        } else {
+          console.log("[CHAT] No search results found, proceeding without context");
+          searchStatus.used = false;
+          return createNvidiaResponse(apiMessages, apiKey, false);
         }
-      },
-    });
+      } else {
+        console.log("[CHAT] LLM decided not to use search tool");
+        searchStatus.skipped = true;
+        searchStatus.used = false;
+        return createNvidiaResponse(apiMessages, apiKey, false);
+      }
+    } else {
+      // Greeting - respond without tools
+      apiMessages = [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...nvidiaMessages,
+      ];
+      return createNvidiaResponse(apiMessages, apiKey, false);
+    }
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
-    });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
@@ -429,4 +384,55 @@ if (searchContext) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to create NVIDIA Response with search status marker
+async function createNvidiaResponse(messages: any[], apiKey: string, hasSearchContext: boolean): Promise<Response> {
+  const nvidiaResponse = await fetch(
+    "https://integrate.api.nvidia.com/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        stream: true,
+        max_tokens: 4096,
+        temperature: 0.7,
+        top_p: 0.85,
+      }),
+    }
+  );
+
+  if (!nvidiaResponse.ok) {
+    const errorText = await nvidiaResponse.text();
+    console.error("NVIDIA NIM API error:", nvidiaResponse.status, errorText);
+    throw new Error(`AI model error: ${nvidiaResponse.status} - ${errorText}`);
+  }
+
+  // Transform the stream to add search status marker
+  const transformedStream = nvidiaResponse.body!.pipeThrough(
+    new TransformStream({
+      start(controller) {
+        // Send search status marker first
+        const marker = hasSearchContext ? '__SEARCH_USED__:true\n' : '__SEARCH_SKIPPED__:true\n';
+        controller.enqueue(new TextEncoder().encode(marker));
+      },
+      transform(chunk, controller) {
+        const text = new TextDecoder().decode(chunk);
+        controller.enqueue(chunk);
+      },
+    })
+  );
+
+  return new Response(transformedStream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
 }
