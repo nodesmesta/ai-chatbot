@@ -1,5 +1,8 @@
 "use client";
 
+import { extractDocxContent } from "@/lib/word/extractor-client";
+import { extractXlsxContent } from "@/lib/excel/extractor-client";
+
 export interface FileContentResult {
   success: boolean;
   content?: string;
@@ -83,6 +86,20 @@ export async function extractFileContent(file: File): Promise<FileContentResult>
 
   if (fileType === "application/pdf" || fileName.endsWith(".pdf")) {
     return extractPdfContent(file);
+  }
+
+  if (
+    fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    fileName.endsWith(".docx")
+  ) {
+    return extractDocxContent(file);
+  }
+
+  if (
+    fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    fileName.endsWith(".xlsx")
+  ) {
+    return extractXlsxContent(file);
   }
 
   return {

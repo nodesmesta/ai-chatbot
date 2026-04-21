@@ -56,6 +56,8 @@ const SUPPORTED_FILE_TYPES = [
   "image/gif",
   "image/webp",
   "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain",
   "text/csv",
   "application/json",
@@ -593,7 +595,7 @@ console.log(`[CHAT] Stream ended, total chunks: ${chunkCount}, content length: $
 
     for (const file of Array.from(files)) {
       if (!SUPPORTED_FILE_TYPES.includes(file.type)) {
-        setError(`File type not supported: ${file.name}. Supported: JPG, PNG, GIF, WebP, PDF, TXT, CSV, JSON`);
+        setError(`File type not supported: ${file.name}. Supported: JPG, PNG, GIF, WebP, PDF, Word (.docx), Excel (.xlsx), TXT, CSV, JSON`);
         continue;
       }
 
@@ -747,11 +749,19 @@ console.log(`[CHAT] Stream ended, total chunks: ${chunkCount}, content length: $
                             <div key={attachment.id} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e293b] rounded-lg border border-[#334155]">
                               {attachment.type.startsWith("image/") ? (
                                 <img src={attachment.preview} alt="" className="w-5 h-5 object-cover rounded" />
-                              ) : attachment.type === "application/pdf" ? (
+                              ) : attachment.type === "application/pdf" || attachment.name.endsWith(".pdf") ? (
                                 <svg className="w-5 h-5 text-[#ef4444]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                 </svg>
-                              ) : attachment.type === "application/json" || attachment.type.includes("json") ? (
+                              ) : attachment.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || attachment.name.endsWith(".docx") ? (
+<svg className="w-5 h-5 text-[#2563eb]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+<path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+</svg>
+) : attachment.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || attachment.name.endsWith(".xlsx") ? (
+<svg className="w-5 h-5 text-[#16a34a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+<path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+</svg>
+) : attachment.type === "application/json" || attachment.type.includes("json") ? (
                                 <svg className="w-5 h-5 text-[#eab308]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                                 </svg>
@@ -849,7 +859,7 @@ console.log(`[CHAT] Stream ended, total chunks: ${chunkCount}, content length: $
       ref={fileInputRef}
       type="file"
       multiple
-      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.txt,.csv,.json,image/*,application/pdf,text/plain,text/csv,application/json"
+      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.xlsx,.txt,.csv,.json,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,text/csv,application/json"
       onChange={handleFileSelect}
       className="hidden"
     />

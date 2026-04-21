@@ -224,6 +224,8 @@ export async function POST(req: NextRequest) {
 
     function getFileTypeLabel(fileType: string, fileName: string): string {
       if (fileType === "application/pdf" || fileName.endsWith(".pdf")) return "PDF";
+  if (fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileName.endsWith(".docx")) return "Word";
+  if (fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || fileName.endsWith(".xlsx")) return "Excel";
       if (fileType === "text/csv" || fileName.endsWith(".csv")) return "CSV";
       if (fileType === "application/json" || fileName.endsWith(".json")) return "JSON";
       if (fileType === "text/plain") return "Text";
