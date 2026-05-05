@@ -4,32 +4,32 @@ const features = [
   {
     icon: ZapIcon,
     title: "Real-time Streaming",
-    description: "Respons AI yang cepat dengan streaming SSE untuk pengalaman yang lebih smooth",
+    description: "Fast AI responses with SSE streaming for a smoother experience",
   },
   {
     icon: DatabaseIcon,
     title: "Chat History",
-    description: "Riwayat chat tersimpan otomatis, mudah diakses kapan saja",
+    description: "Chat history automatically saved, easily accessible anytime",
   },
   {
     icon: LayersIcon,
     title: "Multiple Models",
-    description: "Dukungan berbagai model AI dari NVIDIA NIM untuk kebutuhan berbeda",
+    description: "Support for multiple AI models from NVIDIA NIM for different needs",
   },
   {
     icon: FileTextIcon,
     title: "PDF Extraction",
-    description: "Upload dan analisis dokumen PDF dengan kemampuan AI yang canggih",
+    description: "Upload and analyze PDF documents with advanced AI capabilities",
   },
   {
     icon: CloudIcon,
     title: "Cloudflare Deployment",
-    description: "Deploy dengan mudah di Cloudflare Workers untuk performa global",
+    description: "Deploy easily on Cloudflare Workers for global performance",
   },
   {
     icon: CodeIcon,
     title: "Modern Stack",
-    description: "Dibangun dengan Next.js 15, TypeScript, dan Tailwind CSS v4",
+    description: "Built with Next.js 15, TypeScript, and Tailwind CSS v4",
   },
 ];
 
@@ -39,10 +39,10 @@ export function FeaturesSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Fitur Unggulan
+            Key Features
           </h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Semua yang Anda butuhkan untuk berinteraksi dengan AI secara efektif
+            Everything you need to interact with AI effectively
           </p>
         </div>
 

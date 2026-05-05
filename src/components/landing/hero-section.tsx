@@ -20,7 +20,7 @@ export function HeroSection() {
             href="/chat"
             className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-4 text-lg transition-colors"
           >
-            Mulai Chat
+            Start Chatting
           </Link>
         </div>
       </div>

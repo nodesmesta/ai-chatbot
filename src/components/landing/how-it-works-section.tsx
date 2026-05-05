@@ -4,20 +4,20 @@ const steps = [
   {
     icon: MessageCircleIcon,
     number: "01",
-    title: "Mulai Chat",
-    description: "Klik tombol Mulai Chat untuk membuka interface percakapan",
+    title: "Start Chatting",
+    description: "Click the Start Chatting button to open the chat interface",
   },
   {
     icon: SparklesIcon,
     number: "02",
-    title: "Ajukan Pertanyaan",
-    description: "Tulis pertanyaan atau perintah Anda, AI akan memproses secara real-time",
+    title: "Ask Questions",
+    description: "Type your questions or commands, AI will process them in real-time",
   },
   {
     icon: CheckCircleIcon,
     number: "03",
-    title: "Dapatkan Jawaban",
-    description: "Terima respons yang akurat dan terstruktur dengan sumber referensi",
+    title: "Get Answers",
+    description: "Receive accurate and structured responses with reference sources",
   },
 ];
 
@@ -27,10 +27,10 @@ export function HowItWorksSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Cara Menggunakan
+            How to Use
           </h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Mudah digunakan, hanya 3 langkah untuk mulai
+            Easy to use, just 3 steps to get started
           </p>
         </div>
 
