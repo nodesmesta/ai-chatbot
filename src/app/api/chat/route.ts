@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchWeb, formatSearchResults } from "@/lib/ai/search-tavily";
 import { vectorizeService } from "@/lib/ai/vectorize";
 
-// NVIDIA NIM model configuration
-const MODEL = process.env.NVIDIA_NIM_MODEL || "meta/llama-3.2-90b-vision-instruct";
+// Featherless AI model configuration (OpenAI-compatible)
+const FEATHERLESS_BASE_URL = "https://api.featherless.ai/v1";
+const MODEL = process.env.FEATHERLESS_MODEL || "openai/gpt-oss-120b";
 
 // Tool definition for web search - LLM will decide when to use this
 const SEARCH_TOOL = {
@@ -26,7 +27,7 @@ const SEARCH_TOOL = {
 
 // System prompt dengan instruksi format yang jelas
 const SYSTEM_PROMPT =
-process.env.NVIDIA_NIM_SYSTEM_PROMPT ||
+process.env.FEATHERLESS_SYSTEM_PROMPT ||
 `You are a helpful AI assistant.
 
 CRITICAL: Always provide COMPLETE and FULL responses. Never cut off mid-sentence or mid-thought.
@@ -169,11 +170,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.NVIDIA_NIM_API_KEY;
+    const apiKey = process.env.FEATHERLESS_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "NVIDIA NIM API key not configured" },
+        { error: "Featherless AI API key not configured" },
         { status: 500 }
       );
     }
@@ -297,7 +298,7 @@ export async function POST(req: NextRequest) {
       ];
 
       const firstResponse = await fetch(
-        "https://integrate.api.nvidia.com/v1/chat/completions",
+        `${FEATHERLESS_BASE_URL}/chat/completions`,
         {
           method: "POST",
           headers: {
@@ -318,7 +319,7 @@ export async function POST(req: NextRequest) {
 
       if (!firstResponse.ok) {
         const errorText = await firstResponse.text();
-        console.error("NVIDIA NIM API error (first call):", firstResponse.status, errorText);
+        console.error("Featherless AI API error (first call):", firstResponse.status, errorText);
         return NextResponse.json(
           { error: `AI model error: ${firstResponse.status} - ${errorText}` },
           { status: 500 }
@@ -380,17 +381,17 @@ export async function POST(req: NextRequest) {
             toolResponse,
           ];
 
-          return createNvidiaResponse(secondApiMessages, apiKey, true);
+          return createFeatherlessResponse(secondApiMessages, apiKey, true);
         } else {
           console.log("[CHAT] No search results found, proceeding without context");
           searchStatus.used = false;
-          return createNvidiaResponse(apiMessages, apiKey, false);
+          return createFeatherlessResponse(apiMessages, apiKey, false);
         }
       } else {
         console.log("[CHAT] LLM decided not to use search tool");
         searchStatus.skipped = true;
         searchStatus.used = false;
-        return createNvidiaResponse(apiMessages, apiKey, false);
+        return createFeatherlessResponse(apiMessages, apiKey, false);
       }
     } else {
       // Greeting - respond without tools
@@ -398,7 +399,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: SYSTEM_PROMPT },
         ...nvidiaMessages,
       ];
-      return createNvidiaResponse(apiMessages, apiKey, false);
+      return createFeatherlessResponse(apiMessages, apiKey, false);
     }
 
   } catch (error) {
@@ -410,10 +411,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Helper function to create NVIDIA Response with search status marker
-async function createNvidiaResponse(messages: any[], apiKey: string, hasSearchContext: boolean): Promise<Response> {
-  const nvidiaResponse = await fetch(
-    "https://integrate.api.nvidia.com/v1/chat/completions",
+// Helper function to create Featherless AI Response with search status marker
+async function createFeatherlessResponse(messages: any[], apiKey: string, hasSearchContext: boolean): Promise<Response> {
+  const response = await fetch(
+    `${FEATHERLESS_BASE_URL}/chat/completions`,
     {
       method: "POST",
       headers: {
@@ -431,10 +432,10 @@ async function createNvidiaResponse(messages: any[], apiKey: string, hasSearchCo
     }
   );
 
-  if (!nvidiaResponse.ok) {
-    const errorText = await nvidiaResponse.text();
-    console.error("NVIDIA NIM API error:", nvidiaResponse.status, errorText);
-    throw new Error(`AI model error: ${nvidiaResponse.status} - ${errorText}`);
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Featherless AI API error:", response.status, errorText);
+    throw new Error(`AI model error: ${response.status} - ${errorText}`);
   }
 
   // Create a custom stream that prepends search status marker and forwards all chunks
@@ -443,7 +444,7 @@ async function createNvidiaResponse(messages: any[], apiKey: string, hasSearchCo
 
   const transformedStream = new ReadableStream({
     async start(controller) {
-      const reader = nvidiaResponse.body?.getReader();
+      const reader = response.body?.getReader();
       if (!reader) {
         controller.close();
         return;

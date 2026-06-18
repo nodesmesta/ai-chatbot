@@ -201,3 +201,4 @@ dist
 ### OpenNext ###
 .open-next/
 next-env.d.ts
+.vercel

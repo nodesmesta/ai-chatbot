@@ -136,20 +136,20 @@ export class VectorizeService {
   }
 
   /**
-   * Generate embedding sederhana (menggunakan NVIDIA NIM)
+   * Generate embedding menggunakan Featherless AI (OpenAI-compatible)
    */
   async generateEmbedding(text: string): Promise<number[]> {
-    const apiKey = process.env.NVIDIA_NIM_API_KEY;
-    const embeddingModel = process.env.NVIDIA_NIM_EMBEDDING_MODEL || "nvidia/nv-embedqa-e5-v5";
+    const apiKey = process.env.FEATHERLESS_API_KEY;
+    const embeddingModel = process.env.FEATHERLESS_EMBEDDING_MODEL || "sentence-transformers/all-MiniLM-L6-v2";
 
     if (!apiKey) {
-      console.warn("NVIDIA_NIM_API_KEY not configured. Cannot generate embedding.");
+      console.warn("FEATHERLESS_API_KEY not configured. Cannot generate embedding.");
       return [];
     }
 
     try {
       const response = await fetch(
-        "https://integrate.api.nvidia.com/v1/embeddings",
+        "https://api.featherless.ai/v1/embeddings",
         {
           method: "POST",
           headers: {
@@ -159,7 +159,6 @@ export class VectorizeService {
           body: JSON.stringify({
             model: embeddingModel,
             input: text,
-            input_type: "query",
                       }),
         }
       );
