@@ -159,8 +159,9 @@ User Question: ${lastUserMessage}`;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as { messages: any[] };
+    const body = await req.json() as { messages: any[]; model?: string };
     const messages = body.messages;
+    const selectedModel = body.model || MODEL;
     console.log("Received messages:", JSON.stringify(body.messages, null, 2));
 
     if (!messages || !Array.isArray(messages)) {
@@ -306,7 +307,7 @@ export async function POST(req: NextRequest) {
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: MODEL,
+            model: selectedModel,
             messages: apiMessages,
             tools: [SEARCH_TOOL],
             tool_choice: "auto",
@@ -381,17 +382,17 @@ export async function POST(req: NextRequest) {
             toolResponse,
           ];
 
-          return createFeatherlessResponse(secondApiMessages, apiKey, true);
+          return createFeatherlessResponse(secondApiMessages, apiKey, true, selectedModel);
         } else {
           console.log("[CHAT] No search results found, proceeding without context");
           searchStatus.used = false;
-          return createFeatherlessResponse(apiMessages, apiKey, false);
+          return createFeatherlessResponse(apiMessages, apiKey, false, selectedModel);
         }
       } else {
         console.log("[CHAT] LLM decided not to use search tool");
         searchStatus.skipped = true;
         searchStatus.used = false;
-        return createFeatherlessResponse(apiMessages, apiKey, false);
+        return createFeatherlessResponse(apiMessages, apiKey, false, selectedModel);
       }
     } else {
       // Greeting - respond without tools
@@ -399,7 +400,7 @@ export async function POST(req: NextRequest) {
         { role: "system", content: SYSTEM_PROMPT },
         ...nvidiaMessages,
       ];
-      return createFeatherlessResponse(apiMessages, apiKey, false);
+      return createFeatherlessResponse(apiMessages, apiKey, false, selectedModel);
     }
 
   } catch (error) {
@@ -412,7 +413,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Helper function to create Featherless AI Response with search status marker
-async function createFeatherlessResponse(messages: any[], apiKey: string, hasSearchContext: boolean): Promise<Response> {
+async function createFeatherlessResponse(messages: any[], apiKey: string, hasSearchContext: boolean, model: string): Promise<Response> {
   const response = await fetch(
     `${FEATHERLESS_BASE_URL}/chat/completions`,
     {
@@ -422,7 +423,7 @@ async function createFeatherlessResponse(messages: any[], apiKey: string, hasSea
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         messages,
         stream: true,
         max_tokens: 4096,

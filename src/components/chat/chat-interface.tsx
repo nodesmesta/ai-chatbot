@@ -9,6 +9,7 @@ import { extractFileContent } from "@/lib/pdf/extractor-client";
 import type { Source } from "../ui/source-card";
 import { extractSourcesFromContent, removeSourceSection } from "@/lib/ai/search-utils";
 import { SparklesIcon } from "lucide-react";
+import { MODELS, DEFAULT_MODEL, MODEL_STORAGE_KEY } from "@/lib/ai/models";
 
 export interface ChatSession {
   id: string;
@@ -184,6 +185,7 @@ export default function ChatInterface() {
   const [sessionToRename, setSessionToRename] = useState<ChatSession | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const assistantMessageRef = useRef<number | null>(null);
@@ -218,7 +220,7 @@ const ensureTextareaVisible = () => {
     let assistantContent = "";
 
     try {
-      const requestBody = { messages: [...messagesToSend, userMessage] };
+      const requestBody = { messages: [...messagesToSend, userMessage], model: selectedModel };
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -347,6 +349,21 @@ const ensureTextareaVisible = () => {
     }
   }, [messages, currentSessionId]);
 
+  // Load saved model from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+      if (saved) setSelectedModel(saved);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save model selection to localStorage when it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
+    } catch { /* ignore */ }
+  }, [selectedModel]);
+
   const createNewSession = () => {
     const newSession: ChatSession = { id: generateId(), title: "", messages: [], createdAt: Date.now(), updatedAt: Date.now() };
     setSessions((prev) => {
@@ -447,7 +464,7 @@ const ensureTextareaVisible = () => {
     assistantMessageRef.current = assistantIndex;
     let assistantContent = "";
     try {
-      const requestBody = { messages: messagesToSend };
+      const requestBody = { messages: messagesToSend, model: selectedModel };
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -714,7 +731,7 @@ console.log(`[CHAT] Stream ended, total chunks: ${chunkCount}, content length: $
       {isMobileSidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setIsMobileSidebarOpen(false)} />}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="flex items-center px-3 py-1.5 sm:px-4 sm:py-2 flex-shrink-0">
+        <header className="flex items-center justify-between px-3 py-1.5 sm:px-4 sm:py-2 flex-shrink-0">
           <div className="flex items-center gap-2">
             <button onClick={() => setIsMobileSidebarOpen(true)} className="lg:hidden p-2 hover:bg-[#121826] rounded-lg transition-colors text-[#8a9bb8]">
               <MenuIcon />
@@ -726,6 +743,20 @@ console.log(`[CHAT] Stream ended, total chunks: ${chunkCount}, content length: $
             <div className="sm:hidden">
               <h1 className="text-sm font-normal">AI Chat</h1>
             </div>
+          </div>
+
+          <div className="flex items-center">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              disabled={isLoading}
+              className="bg-[#1e293b] text-xs text-[#e2e8f0] border border-[#334155] rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-white/30 cursor-pointer max-w-[140px] sm:max-w-[180px] truncate disabled:opacity-50 disabled:cursor-not-allowed"
+              title={MODELS.find(m => m.id === selectedModel)?.description || selectedModel}
+            >
+              {MODELS.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
           </div>
         </header>
 
