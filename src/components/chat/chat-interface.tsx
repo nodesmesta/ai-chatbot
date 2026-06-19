@@ -191,12 +191,18 @@ export default function ChatInterface() {
 
   // Auto-focus textarea on mount and after creating a new session
   useEffect(() => {
-    // requestAnimationFrame ensures DOM is fully painted before focusing
     const raf = requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
     return () => cancelAnimationFrame(raf);
   }, [currentSessionId]);
+
+  // Re-focus textarea after stream completes (isLoading -> false)
+  useEffect(() => {
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
 
   const createNewSession = () => {
     const newSession: ChatSession = { id: generateId(), title: "", messages: [], createdAt: Date.now(), updatedAt: Date.now() };
