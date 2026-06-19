@@ -39,15 +39,15 @@ export function HowItWorksSection() {
             <div key={index} className="relative">
               {/* Connector line */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-transparent -translate-y-1/2" />
+                <div className="hidden md:block absolute top-8 left-full w-full h-px bg-blue-500/30" />
               )}
 
               <div className="text-center">
                 <div className="relative inline-block mb-4">
-                  <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
-                    <step.icon className="w-10 h-10 text-white" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
+                    <step.icon className="w-7 h-7 text-white" />
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
                     {step.number}
                   </div>
                 </div>

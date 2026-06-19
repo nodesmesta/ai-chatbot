@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ExternalLink, Copy, Check, Globe } from "lucide-react";
 
 export interface Source {
   title: string;
@@ -12,39 +13,6 @@ export interface Source {
 interface SourceCardProps {
   source: Source;
   index: number;
-}
-
-function ExternalLinkIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
-    </svg>
-  );
-}
-
-function CopyIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx={12} cy={12} r={10} />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-    </svg>
-  );
 }
 
 export function SourceCard({ source, index }: SourceCardProps) {
@@ -87,7 +55,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
             </div>
 
             <div className="flex items-center gap-1.5 text-[11px] text-[#94a3b8]">
-              <GlobeIcon />
+              <Globe className="w-3.5 h-3.5" />
               <span className="truncate">{source.domain}</span>
             </div>
 
@@ -98,11 +66,11 @@ export function SourceCard({ source, index }: SourceCardProps) {
 
           {/* Actions */}
           <div className="flex-shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={handleCopy} className="p-1.5 rounded-lg hover:bg-[#475569] text-[#94a3b8] hover:text-white transition-colors" title="Copy URL">
-              {copied ? <CheckIcon /> : <CopyIcon />}
+            <button onClick={handleCopy} className="p-1.5 rounded-lg hover:bg-[#475569] text-[#94a3b8] hover:text-white transition-colors cursor-pointer" title="Copy URL">
+              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
-            <button onClick={handleOpen} className="p-1.5 rounded-lg hover:bg-[#475569] text-[#94a3b8] hover:text-white transition-colors" title="Open in new tab">
-              <ExternalLinkIcon />
+            <button onClick={handleOpen} className="p-1.5 rounded-lg hover:bg-[#475569] text-[#94a3b8] hover:text-white transition-colors cursor-pointer" title="Open in new tab">
+              <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

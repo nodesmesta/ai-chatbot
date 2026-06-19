@@ -2,7 +2,7 @@
 
 import { extractSourcesFromContent, removeSourceSection } from "@/lib/ai/search-utils";
 import { CopyButton } from "../common/copy-button";
-import { BookIcon, ChevronDownIcon, ChevronUpIcon } from "./source-list";
+import { BookOpen, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import type { Source } from "./source-card";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -17,14 +17,6 @@ interface CodeProps {
   [key: string]: unknown;
 }
 import 'katex/dist/katex.css';
-
-function RefreshIcon() {
-  return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.001 8.001 0 01-15.356-2m0 0V15h4.582" />
-    </svg>
-  );
-}
 
 // Preprocess content to fix numbered list formatting
 function preprocessContent(content: string): string {
@@ -162,25 +154,25 @@ export function MainContent({ content, sources = [], onRetry }: MainContentProps
           {/* Toggle button */}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#1e293b] transition-all"
+            className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-[#94a3b8] hover:text-white hover:bg-[#1e293b] transition-all cursor-pointer"
             title="View sources"
           >
-            <BookIcon />
+            <BookOpen className="w-3.5 h-3.5" />
             <span className="px-1.5 py-0.5 rounded bg-white text-black text-[10px] font-bold border border-white">
               {allSources.length}
             </span>
             <span className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
-              {isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </span>
           </button>
           {/* Refresh button */}
           {onRetry && (
             <button
               onClick={onRetry}
-              className="p-1.5 rounded-lg transition-all hover:bg-[#1e293b] text-[#94a3b8] hover:text-white"
+              className="p-1.5 rounded-lg transition-all hover:bg-[#1e293b] text-[#94a3b8] hover:text-white cursor-pointer"
               title="Refresh response"
             >
-              <RefreshIcon />
+              <RefreshCw className="w-4 h-4" />
             </button>
           )}
         </div>
