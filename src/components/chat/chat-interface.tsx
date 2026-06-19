@@ -502,24 +502,24 @@ export default function ChatInterface() {
                       </div>
                     </div>
                   ) : (
-                    <MessageBubble role="assistant" content={message.content} sources={message.sources} onRetry={handleRetryLastResponse} />
+                    index === messages.length - 1 && isLoading && !message.content ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                          <SparklesIcon className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-sm text-[#94a3b8] font-medium">Thinking</span>
+                        <div className="flex items-center gap-0.5">
+                          <span className="w-1 h-1 bg-[#94a3b8] rounded-full animate-[bounce_1.4s_infinite_both]" />
+                          <span className="w-1 h-1 bg-[#cbd5e1] rounded-full animate-[bounce_1.4s_infinite_0.2s_both]" />
+                          <span className="w-1 h-1 bg-[#94a3b8] rounded-full animate-[bounce_1.4s_infinite_0.4s_both]" />
+                        </div>
+                      </div>
+                    ) : (
+                      <MessageBubble role="assistant" content={message.content} sources={message.sources} onRetry={handleRetryLastResponse} />
+                    )
                   )}
                 </Fragment>
               ))}
-
-              {searchStatus?.searching && (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
-                    <SparklesIcon className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-sm text-[#94a3b8] font-medium">Thinking</span>
-                  <div className="flex items-center gap-0.5">
-                    <span className="w-1 h-1 bg-[#94a3b8] rounded-full animate-[bounce_1.4s_infinite_both]" />
-                    <span className="w-1 h-1 bg-[#cbd5e1] rounded-full animate-[bounce_1.4s_infinite_0.2s_both]" />
-                    <span className="w-1 h-1 bg-[#94a3b8] rounded-full animate-[bounce_1.4s_infinite_0.4s_both]" />
-                  </div>
-                </div>
-              )}
 
               {searchStatus?.skipped && (
                 <div className="flex items-center gap-2">
