@@ -227,10 +227,16 @@ const ensureTextareaVisible = () => {
         body: JSON.stringify(requestBody),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = typeof errorData === "object" && errorData !== null && "error" in errorData && typeof errorData.error === "string"
-          ? errorData.error
-          : "Failed to get response";
+        let errorMessage = "Failed to get response";
+        try {
+          const text = await response.text();
+          if (text) {
+            const errorData = JSON.parse(text);
+            if (typeof errorData === "object" && errorData !== null && "error" in errorData && typeof errorData.error === "string") {
+              errorMessage = errorData.error;
+            }
+          }
+        } catch { /* text parse fallback */ }
         throw new Error(errorMessage);
       }
       const reader = response.body?.getReader();
@@ -471,10 +477,16 @@ const ensureTextareaVisible = () => {
         body: JSON.stringify(requestBody),
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = typeof errorData === "object" && errorData !== null && "error" in errorData && typeof errorData.error === "string"
-          ? errorData.error
-          : "Failed to get response";
+        let errorMessage = "Failed to get response";
+        try {
+          const text = await response.text();
+          if (text) {
+            const errorData = JSON.parse(text);
+            if (typeof errorData === "object" && errorData !== null && "error" in errorData && typeof errorData.error === "string") {
+              errorMessage = errorData.error;
+            }
+          }
+        } catch { /* text parse fallback */ }
         throw new Error(errorMessage);
       }
       const reader = response.body?.getReader();

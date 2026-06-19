@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.FEATHERLESS_API_KEY;
+    const apiKey = process.env.FEATHERLESS_API_KEY?.trim();
 
     if (!apiKey) {
       return NextResponse.json(
