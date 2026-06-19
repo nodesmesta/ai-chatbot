@@ -191,10 +191,11 @@ export default function ChatInterface() {
 
   // Auto-focus textarea on mount and after creating a new session
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // requestAnimationFrame ensures DOM is fully painted before focusing
+    const raf = requestAnimationFrame(() => {
       textareaRef.current?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(raf);
   }, [currentSessionId]);
 
   const createNewSession = () => {
@@ -589,6 +590,7 @@ export default function ChatInterface() {
       onBlur={() => setIsFocused(false)}
       placeholder="Ask anything..."
       rows={2}
+      autoFocus
       disabled={isLoading}
       className="flex-1 px-3 py-1.5 bg-transparent resize-none focus:outline-none max-h-48 text-base"
       style={{ minHeight: "44px" }}
